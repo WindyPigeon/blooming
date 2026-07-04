@@ -36,6 +36,11 @@ COLORS = {
 BASE_DIR = os.path.dirname(__file__)
 IMAGE_DIR = os.path.join(BASE_DIR, '..', '..', '..', 'dev', 'concepts')
 
+STATE_MENU = 0
+STATE_LOADING = 1
+STATE_GAME = 2
+STATE_QUIT = 3
+
 class ParticleSystem:
     def __init__(self):
         self.particles: List[Dict[str, Any]] = []
@@ -946,6 +951,7 @@ class Game:
         pygame.display.set_caption("The Blooming")
         self.clock = pygame.time.Clock()
         self.running = True
+        self.state = STATE_MENU
         
         self.inventory = Inventory()
         self.dialogue = DialogueSystem(self.screen)
@@ -953,6 +959,9 @@ class Game:
         self.sanity = SanitySystem()
         self.screen_shake = ScreenShake()
         self.flags: Dict[str, Any] = {}
+        
+        self.loading_progress = 0
+        self.loading_complete = False
         
         self.journal.add_entry('entry1', 'First Day Notes', 
                               'I arrived at Blackwood Research Facility today.\n'
@@ -986,13 +995,24 @@ class Game:
                     self.running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        self.running = False
+                        if self.state == STATE_GAME:
+                            self.running = False
+                        elif self.state == STATE_LOADING:
+                            self.state = STATE_MENU
                     elif event.key == pygame.K_i:
-                        self.show_inventory()
+                        if self.state == STATE_GAME:
+                            self.show_inventory()
                     elif event.key == pygame.K_j:
-                        self.journal.active = not self.journal.active
+                        if self.state == STATE_GAME:
+                            self.journal.active = not self.journal.active
             
-            self.update(events)
+            if self.state == STATE_MENU:
+                self.update_menu(events)
+            elif self.state == STATE_LOADING:
+                self.update_loading(events)
+            elif self.state == STATE_GAME:
+                self.update_game(events)
+            
             self.draw()
             
             pygame.display.flip()
@@ -1000,7 +1020,21 @@ class Game:
         pygame.quit()
         sys.exit()
     
-    def update(self, events: List[pygame.event.Event]):
+    def update_menu(self, events: List[pygame.event.Event]):
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    self.start_loading()
+    
+    def update_loading(self, events: List[pygame.event.Event]):
+        if not self.loading_complete:
+            self.loading_progress += 1
+            if self.loading_progress >= 100:
+                self.loading_complete = True
+                self.state = STATE_GAME
+                self.current_scene = self.scenes['arrival']
+    
+    def update_game(self, events: List[pygame.event.Event]):
         self.current_scene.update(events)
         self.dialogue.update(events)
         self.sanity.update()
@@ -1010,6 +1044,65 @@ class Game:
             self.current_scene = self.scenes['blooming']
     
     def draw(self):
+        if self.state == STATE_MENU:
+            self.draw_menu()
+        elif self.state == STATE_LOADING:
+            self.draw_loading()
+        elif self.state == STATE_GAME:
+            self.draw_game()
+    
+    def draw_menu(self):
+        self.screen.fill(COLORS['black'])
+        
+        title_font = pygame.font.Font(None, 72)
+        subtitle_font = pygame.font.Font(None, 36)
+        
+        title_text = title_font.render("THE BLOOMING", True, COLORS['white'])
+        subtitle_text = subtitle_font.render("A Psychological Horror Experience", True, COLORS['gray'])
+        
+        self.screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, 200))
+        self.screen.blit(subtitle_text, (SCREEN_WIDTH // 2 - subtitle_text.get_width() // 2, 280))
+        
+        instructions = [
+            "Press ENTER to Play",
+            "Press ESC to Quit"
+        ]
+        for i, instruction in enumerate(instructions):
+            text = subtitle_font.render(instruction, True, COLORS['white'])
+            self.screen.blit(text, (SCREEN_WIDTH // 2 - text.get_width() // 2, 450 + i * 40))
+        
+        concept_art = load_image('greenhouse/greenhouse-exterior.png')
+        if concept_art:
+            scaled_art = pygame.transform.scale(concept_art, (600, 300))
+            self.screen.blit(scaled_art, (SCREEN_WIDTH // 2 - 300, 350))
+    
+    def draw_loading(self):
+        self.screen.fill(COLORS['black'])
+        
+        title_font = pygame.font.Font(None, 64)
+        font = pygame.font.Font(None, 32)
+        
+        title_text = title_font.render("Loading...", True, COLORS['white'])
+        self.screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, 200))
+        
+        bar_width = 400
+        bar_height = 30
+        bar_x = SCREEN_WIDTH // 2 - bar_width // 2
+        bar_y = 350
+        
+        pygame.draw.rect(self.screen, COLORS['dark_gray'], (bar_x, bar_y, bar_width, bar_height))
+        pygame.draw.rect(self.screen, COLORS['white'], (bar_x, bar_y, bar_width, bar_height), 3)
+        
+        progress_width = int((self.loading_progress / 100) * bar_width)
+        pygame.draw.rect(self.screen, COLORS['green'], (bar_x, bar_y, progress_width, bar_height))
+        
+        progress_text = font.render(f"{self.loading_progress}%", True, COLORS['white'])
+        self.screen.blit(progress_text, (SCREEN_WIDTH // 2 - progress_text.get_width() // 2, 400))
+        
+        loading_text = font.render("Initializing game systems...", True, COLORS['gray'])
+        self.screen.blit(loading_text, (SCREEN_WIDTH // 2 - loading_text.get_width() // 2, 500))
+    
+    def draw_game(self):
         self.current_scene.draw(self.screen)
         self.dialogue.draw()
         self.inventory.draw(self.screen)
@@ -1023,6 +1116,11 @@ class Game:
         for i, instruction in enumerate(instructions):
             text = pygame.font.Font(None, 20).render(instruction, True, COLORS['white'])
             self.screen.blit(text, (20, SCREEN_HEIGHT - 30 + i * 25))
+    
+    def start_loading(self):
+        self.state = STATE_LOADING
+        self.loading_progress = 0
+        self.loading_complete = False
     
     def show_inventory(self):
         pass
