@@ -1,0 +1,1463 @@
+Title: THE BLOOMING
+Credit: Interactive Game Screenplay
+Author: Group 24
+Draft date: 2026
+Contact:
+Genre: 2D Point-and-Click Psychological Horror
+
+# GAME STRUCTURE
+
+Game Type: 2D Point-and-Click Psychological Horror
+
+Player Character: ELIAS
+
+Core Mechanics:
+- Point-and-click navigation
+- Environmental inspection
+- Dialogue interaction
+- Inventory collection
+- Inventory item usage
+- Document reading
+- Puzzle solving
+- Journal and objective tracking
+- Sanity system
+- Event-driven horror sequences
+
+
+# SEQUENCE 01 - FIRST DAY
+
+
+EXT. BLACKWOOD BOTANICAL RESEARCH FACILITY - MORNING
+
+FADE IN:
+
+A remote botanical research facility surrounded by dense forest.
+
+Morning mist moves between the trees.
+
+Rainwater drips from the facility roof.
+
+SFX: DISTANT BIRDS.
+
+SFX: LIGHT WIND.
+
+SFX: WATER DRIPPING.
+
+ELIAS HART, a young junior botanist, stands outside the main entrance.
+
+DR. MARA VALE, a senior botanist, waits beside the security door.
+
+MARA
+You must be Elias.
+
+ELIAS
+Dr. Vale?
+
+MARA
+Mara is fine.
+
+MARA
+You found the place without getting lost.
+That's already better than our last intern.
+
+ELIAS
+I'm not an intern.
+
+MARA
+Then you'll have even fewer excuses.
+
+Mara turns and walks toward the facility entrance.
+
+She stops beside the security door.
+
+MARA
+Come on.
+
+MARA
+I'll show you around.
+
+
+[[PLAYER CONTROL ENABLED]]
+
+
+[[OBJECTIVE: FOLLOW DR. VALE]]
+
+
+The player may now inspect the environment.
+
+Available hotspots:
+
+[[HOTSPOT: FACILITY SIGN]]
+
+[[HOTSPOT: SECURITY DOOR]]
+
+[[HOTSPOT: INTERCOM]]
+
+[[HOTSPOT: DR. MARA VALE]]
+
+
+# OPTIONAL INTERACTION - FACILITY SIGN
+
+
+[[PLAYER ACTION: CLICK FACILITY SIGN]]
+
+
+The camera moves closer to the sign.
+
+BLACKWOOD BOTANICAL RESEARCH FACILITY
+
+AUTHORIZED PERSONNEL ONLY
+
+
+ELIAS
+Blackwood Research Facility.
+
+ELIAS
+A long way from the university greenhouse.
+
+
+[[RETURN PLAYER CONTROL]]
+
+
+# OPTIONAL INTERACTION - INTERCOM
+
+
+[[PLAYER ACTION: CLICK INTERCOM]]
+
+
+ELIAS
+Security intercom.
+
+MARA
+Hopefully you won't need it.
+
+ELIAS
+Hopefully?
+
+MARA
+Hopefully.
+
+
+[[RETURN PLAYER CONTROL]]
+
+
+# MAIN INTERACTION - SECURITY DOOR
+
+
+[[PLAYER ACTION: CLICK SECURITY DOOR]]
+
+
+Elias approaches the door.
+
+The player attempts to open it.
+
+SFX: ACCESS DENIED BEEP.
+
+The indicator turns red.
+
+
+ELIAS
+Locked.
+
+MARA
+Yes.
+
+MARA
+That tends to happen with security doors.
+
+Mara removes an access card from her pocket and holds it toward Elias.
+
+
+MARA
+Here.
+
+MARA
+Take this.
+
+
+[[INTERACTIVE OBJECT ENABLED: ACCESS CARD]]
+
+
+The player must click the access card.
+
+
+[[PLAYER ACTION: CLICK ACCESS CARD]]
+
+
+SFX: ITEM ACQUIRED.
+
+The access card moves into the inventory bar.
+
+
+[[ITEM ACQUIRED: LEVEL-1 ACCESS CARD]]
+
+
+ELIAS
+My access card?
+
+MARA
+Level One.
+
+MARA
+Greenhouse, staff office, archive corridor.
+
+ELIAS
+And the other rooms?
+
+MARA
+Not your concern.
+
+A short pause.
+
+MARA
+Select the card from your equipment.
+
+MARA
+Then use it on the security panel beside the door.
+
+
+[[PLAYER CONTROL ENABLED]]
+
+
+# WRONG ACTION BRANCH
+
+
+[[BRANCH: PLAYER CLICKS DOOR WITHOUT SELECTING CARD]]
+
+
+SFX: ACCESS DENIED.
+
+ELIAS
+Still locked.
+
+MARA
+Card first, Elias.
+
+MARA
+Panel second.
+
+
+[[RETURN PLAYER CONTROL]]
+
+
+# CORRECT ACTION
+
+
+[[PLAYER ACTION: SELECT ACCESS CARD]]
+
+[[PLAYER ACTION: CLICK SECURITY PANEL]]
+
+
+Elias scans the access card.
+
+SFX: CARD SCAN.
+
+The security indicator changes from red to green.
+
+SFX: ACCESS GRANTED.
+
+SFX: AUTOMATIC DOOR OPENING.
+
+
+MARA
+There you go.
+
+MARA
+You'll use equipment the same way.
+
+MARA
+Choose what you need...
+
+MARA
+...then use it where it belongs.
+
+
+[[OBJECTIVE COMPLETE: ENTER THE FACILITY]]
+
+
+MARA
+After you.
+
+
+[[PLAYER ACTION: CLICK OPEN ENTRANCE]]
+
+
+FADE OUT.
+
+
+# SEQUENCE 02 - FACILITY ORIENTATION
+
+
+INT. BLACKWOOD FACILITY - MAIN CORRIDOR - MORNING
+
+FADE IN:
+
+A narrow research corridor.
+
+Fluorescent lights hum overhead.
+
+Three important doors are visible.
+
+STAFF OFFICE.
+
+GREENHOUSE.
+
+RESTRICTED LABORATORY.
+
+Mara walks slowly ahead of Elias.
+
+
+MARA
+The greenhouse is at the end of the corridor.
+
+MARA
+My office is on the left.
+
+MARA
+Storage is opposite it.
+
+
+[[PLAYER CONTROL ENABLED]]
+
+[[OBJECTIVE: FOLLOW DR. VALE TO THE GREENHOUSE]]
+
+
+The player may follow Mara or inspect the corridor.
+
+
+# OPTIONAL INTERACTION - RESTRICTED LABORATORY
+
+
+[[PLAYER ACTION: CLICK RESTRICTED LABORATORY DOOR]]
+
+
+Elias approaches the door.
+
+The security indicator is red.
+
+
+ELIAS
+Restricted Laboratory.
+
+MARA
+Not part of today's tour.
+
+ELIAS
+What's inside?
+
+MARA
+Projects above your clearance level.
+
+ELIAS
+Dangerous projects?
+
+MARA
+Expensive projects.
+
+A pause.
+
+MARA
+Come on.
+
+MARA
+Your specimen is waiting.
+
+
+[[RETURN PLAYER CONTROL]]
+
+
+# GREENHOUSE ENTRANCE
+
+
+[[PLAYER ACTION: APPROACH MARA]]
+
+
+Mara stands beside the greenhouse entrance.
+
+
+MARA
+Before we go inside, one rule.
+
+ELIAS
+Only one?
+
+MARA
+Don't remove anything from the greenhouse
+without authorization.
+
+ELIAS
+Understood.
+
+MARA
+And don't move any specimen unless you're told.
+
+ELIAS
+That's two rules.
+
+MARA
+You're observant.
+
+MARA
+Good start.
+
+Mara scans her access card.
+
+SFX: CARD SCAN.
+
+SFX: ACCESS GRANTED.
+
+The greenhouse door opens.
+
+
+MARA
+After you.
+
+
+[[PLAYER ACTION: CLICK GREENHOUSE ENTRANCE]]
+
+
+FADE OUT.
+
+
+# SEQUENCE 03 - GREENHOUSE ORIENTATION
+
+
+INT. RESEARCH GREENHOUSE - MORNING
+
+FADE IN:
+
+Warm sunlight passes through the glass greenhouse roof.
+
+Rows of plants fill the room.
+
+Water droplets fall from irrigation pipes.
+
+Small pollen particles float through the sunlight.
+
+BGM: SOFT GREENHOUSE AMBIENCE.
+
+SFX: WATER DRIPPING.
+
+SFX: DISTANT BIRDS.
+
+VFX: FLOATING POLLEN PARTICLES.
+
+
+[[PLAYER CONTROL ENABLED]]
+
+
+Mara remains near the entrance.
+
+
+MARA
+Go ahead.
+
+ELIAS
+Go ahead with what?
+
+MARA
+Look around.
+
+MARA
+If you're going to work here,
+learn where everything is.
+
+
+[[OBJECTIVE: EXPLORE THE GREENHOUSE]]
+
+
+Available hotspots:
+
+[[HOTSPOT: WATERING CAN]]
+
+[[HOTSPOT: FILTERED WATER SINK]]
+
+[[HOTSPOT: CARE INSTRUCTION CLIPBOARD]]
+
+[[HOTSPOT: GREENHOUSE THERMOMETER]]
+
+[[HOTSPOT: STORAGE CABINET]]
+
+[[HOTSPOT: OLD RESEARCH JOURNAL]]
+
+[[HOTSPOT: SPECIMEN X-17]]
+
+[[HOTSPOT: DR. MARA VALE]]
+
+
+# INTERACTION - FILTERED WATER SINK
+
+
+[[PLAYER ACTION: CLICK FILTERED WATER SINK]]
+
+
+ELIAS
+Filtered water system?
+
+MARA
+Yes.
+
+MARA
+Specimens in this section don't receive water
+directly from the main supply.
+
+ELIAS
+Why?
+
+MARA
+Because contamination ruins research.
+
+A beat.
+
+MARA
+And careers.
+
+
+[[RETURN PLAYER CONTROL]]
+
+
+# INTERACTION - WATERING CAN
+
+
+[[PLAYER ACTION: CLICK WATERING CAN]]
+
+
+ELIAS
+Standard watering can.
+
+MARA
+Take it.
+
+ELIAS
+Now?
+
+MARA
+Unless you're planning to carry water
+in your hands.
+
+
+[[PLAYER ACTION: CLICK WATERING CAN AGAIN]]
+
+
+SFX: ITEM ACQUIRED.
+
+
+[[ITEM ACQUIRED: EMPTY WATERING CAN]]
+
+
+MARA
+Good.
+
+MARA
+You know how to pick things up.
+
+ELIAS
+I did graduate from university.
+
+MARA
+We'll see how useful that was.
+
+
+[[RETURN PLAYER CONTROL]]
+
+
+# INTERACTION - OLD RESEARCH JOURNAL
+
+
+[[PLAYER ACTION: CLICK OLD RESEARCH JOURNAL]]
+
+
+Elias approaches an old journal lying on a table.
+
+
+ELIAS
+Whose journal is this?
+
+Mara immediately turns toward Elias.
+
+
+MARA
+Leave that.
+
+ELIAS
+Why?
+
+Mara walks toward the table and closes the journal.
+
+
+MARA
+Old research notes.
+
+ELIAS
+From X-17?
+
+MARA
+I said leave it.
+
+
+[[HOTSPOT DISABLED: OLD RESEARCH JOURNAL]]
+
+
+Mara walks toward the central specimen table.
+
+
+MARA
+Come here.
+
+MARA
+There's something you need to see.
+
+
+[[OBJECTIVE UPDATED: MEET DR. VALE AT THE SPECIMEN TABLE]]
+
+
+# SEQUENCE 04 - FIRST MEETING WITH X-17
+
+
+[[PLAYER ACTION: CLICK MARA OR SPECIMEN TABLE]]
+
+
+Elias approaches Mara.
+
+On the table is a small black flowerpot.
+
+A pale, closed flower bud grows from the soil.
+
+A label reads:
+
+SPECIMEN X-17
+
+
+MARA
+This is why you're here.
+
+ELIAS
+That's it?
+
+MARA
+Disappointed?
+
+ELIAS
+A little.
+
+MARA
+Specimen X-17.
+
+MARA
+Recovered three weeks ago from an
+undocumented forest region.
+
+ELIAS
+Species?
+
+MARA
+Unknown.
+
+ELIAS
+Genus?
+
+MARA
+Unknown.
+
+ELIAS
+Family?
+
+Mara looks at Elias.
+
+MARA
+If we knew that, Elias,
+we wouldn't need you.
+
+
+[[DIALOGUE CHOICE]]
+
+
++ [IT LOOKS DANGEROUS.]
+
+    ELIAS
+    I expected something more dangerous.
+
+    Mara looks at the flower.
+
+    MARA
+    Appearances are unreliable.
+
+    [[SET FLAG: FIRST_IMPRESSION = DANGEROUS]]
+
+
++ [IT'S BEAUTIFUL.]
+
+    ELIAS
+    It's beautiful.
+
+    MARA
+    Careful with that word.
+
+    [[SET FLAG: FIRST_IMPRESSION = BEAUTIFUL]]
+
+
++ [IT LOOKS UNUSUAL.]
+
+    ELIAS
+    It looks unusual.
+
+    MARA
+    Give it time.
+
+    [[SET FLAG: FIRST_IMPRESSION = UNUSUAL]]
+
+
+# SEQUENCE 05 - OBSERVATION TUTORIAL
+
+
+MARA
+Before you do anything...
+
+MARA
+Inspect it.
+
+ELIAS
+What am I looking for?
+
+MARA
+You tell me.
+
+
+[[OBSERVATION MODE ENABLED]]
+
+
+Available inspection points:
+
+[[INSPECTION POINT: PETALS]]
+
+[[INSPECTION POINT: STEM]]
+
+[[INSPECTION POINT: SOIL]]
+
+
+# INSPECT PETALS
+
+
+[[PLAYER ACTION: CLICK PETALS]]
+
+
+The camera zooms toward the flower petals.
+
+
+ELIAS
+Closed petals.
+
+ELIAS
+Pale coloration.
+
+ELIAS
+No visible physical damage.
+
+MARA
+Good.
+
+MARA
+Next.
+
+
+[[MARK INSPECTION: PETALS COMPLETE]]
+
+
+# INSPECT STEM
+
+
+[[PLAYER ACTION: CLICK STEM]]
+
+
+ELIAS
+Stem is upright.
+
+ELIAS
+No visible lesions.
+
+MARA
+And?
+
+The camera moves closer.
+
+
+ELIAS
+Slight discoloration near the base.
+
+MARA
+Good.
+
+MARA
+Remember it.
+
+
+[[MARK INSPECTION: STEM COMPLETE]]
+
+
+# INSPECT SOIL
+
+
+[[PLAYER ACTION: CLICK SOIL]]
+
+
+ELIAS
+The soil is dry.
+
+MARA
+Which means?
+
+
+[[DIALOGUE CHOICE]]
+
+
++ [WATER IT.]
+
+    ELIAS
+    Water it.
+
+    MARA
+    Exactly.
+
+    [[CORRECT RESPONSE]]
+
+
++ [CHANGE THE SOIL.]
+
+    ELIAS
+    Change the soil?
+
+    MARA
+    No.
+
+    MARA
+    Start with the obvious problem.
+
+    MARA
+    The soil is dry.
+
+    [[RETURN TO DIALOGUE CHOICE]]
+
+
++ [MOVE IT INTO SUNLIGHT.]
+
+    ELIAS
+    Move it into sunlight?
+
+    MARA
+    What was the rule outside?
+
+    ELIAS
+    Don't move the specimens.
+
+    MARA
+    Good.
+
+    MARA
+    So don't.
+
+    [[RETURN TO DIALOGUE CHOICE]]
+
+
+[[OBSERVATION MODE DISABLED]]
+
+
+# SEQUENCE 06 - PLANT CARE TUTORIAL
+
+
+MARA
+You already found the watering can.
+
+MARA
+Where would you fill it?
+
+
+[[OBJECTIVE: PREPARE 500 ML OF FILTERED WATER]]
+
+
+[[PLAYER CONTROL ENABLED]]
+
+
+# WRONG OBJECT INTERACTION
+
+
+[[BRANCH: PLAYER USES WATERING CAN ON STORAGE CABINET]]
+
+
+ELIAS
+I don't think this is going to help.
+
+MARA
+An excellent scientific observation.
+
+
+[[RETURN PLAYER CONTROL]]
+
+
+# CORRECT LOCATION
+
+
+[[PLAYER ACTION: USE EMPTY WATERING CAN ON FILTERED WATER SINK]]
+
+
+ELIAS
+How much water?
+
+MARA
+Check the care sheet.
+
+ELIAS
+You could just tell me.
+
+MARA
+I could.
+
+A beat.
+
+MARA
+Check the care sheet.
+
+
+[[OBJECTIVE UPDATED: READ X-17 CARE INSTRUCTIONS]]
+
+
+# CARE INSTRUCTION DOCUMENT
+
+
+[[PLAYER ACTION: CLICK CARE INSTRUCTION CLIPBOARD]]
+
+
+The document interface opens.
+
+
+SPECIMEN X-17
+
+DAILY CARE PROCEDURE
+
+1. Confirm greenhouse temperature: 23-25 degrees Celsius.
+
+2. Inspect specimen for physical abnormalities.
+
+3. Provide 500 ml filtered water.
+
+4. Record unusual reactions.
+
+5. Do not relocate the specimen.
+
+
+ELIAS
+Five hundred milliliters.
+
+MARA
+Good.
+
+MARA
+Now you know why we write things down.
+
+
+[[DOCUMENT INTERFACE CLOSES]]
+
+[[OBJECTIVE UPDATED: FILL WATERING CAN WITH 500 ML WATER]]
+
+
+# WATER QUANTITY SELECTION
+
+
+[[PLAYER ACTION: USE WATERING CAN ON SINK]]
+
+
+Available choices:
+
++ [250 ML]
+
+    SFX: WATER FLOW.
+
+    ELIAS
+    Two hundred and fifty.
+
+    MARA
+    Read the care sheet again.
+
+    [[WATERING CAN RESET TO EMPTY]]
+
+
++ [500 ML]
+
+    SFX: WATER FLOW.
+
+    ELIAS
+    Five hundred milliliters.
+
+    MARA
+    Good.
+
+    [[ITEM UPDATED: WATERING CAN - 500 ML]]
+
+    [[CONTINUE]]
+
+
++ [750 ML]
+
+    SFX: WATER FLOW.
+
+    ELIAS
+    Seven hundred and fifty.
+
+    MARA
+    You're caring for it, Elias.
+
+    MARA
+    Not drowning it.
+
+    [[WATERING CAN RESET TO EMPTY]]
+
+
+# SEQUENCE 07 - WATERING X-17
+
+
+MARA
+Now water the specimen.
+
+
+[[OBJECTIVE: WATER X-17]]
+
+
+[[PLAYER ACTION: SELECT WATERING CAN - 500 ML]]
+
+[[PLAYER ACTION: USE ON X-17]]
+
+
+Elias carefully waters the plant.
+
+SFX: WATER POURING.
+
+Mara observes.
+
+
+MARA
+Slowly.
+
+The watering finishes.
+
+
+[[ITEM UPDATED: EMPTY WATERING CAN]]
+
+[[OBJECTIVE COMPLETE: WATER X-17]]
+
+
+Nothing happens.
+
+Elias looks at the flower.
+
+
+ELIAS
+That's it?
+
+MARA
+What were you expecting?
+
+ELIAS
+I don't know.
+
+MARA
+That's research.
+
+
+SFX: RADIO STATIC.
+
+
+RADIO VOICE
+Dr. Vale.
+
+RADIO VOICE
+Report to Lab Two immediately.
+
+Mara's expression changes.
+
+
+MARA
+I'm coming.
+
+She turns toward Elias.
+
+
+MARA
+Finish the observation record.
+
+MARA
+Then leave.
+
+ELIAS
+You're leaving me here?
+
+MARA
+It's a greenhouse, Elias.
+
+Mara looks at X-17.
+
+A short pause.
+
+
+MARA
+What could happen?
+
+Mara walks toward the greenhouse exit.
+
+Before leaving, she stops.
+
+
+MARA
+Elias.
+
+ELIAS
+Yeah?
+
+MARA
+If you hear anything unusual--
+
+She stops herself.
+
+
+ELIAS
+What?
+
+MARA
+Nothing.
+
+MARA
+Finish your work.
+
+Mara exits.
+
+SFX: GREENHOUSE DOOR CLOSES.
+
+SFX: ELECTRONIC LOCK.
+
+The greenhouse ambience becomes quieter.
+
+
+[[GUIDE CHARACTER REMOVED]]
+
+[[PLAYER CONTROL ENABLED]]
+
+[[OBJECTIVE: COMPLETE THE OBSERVATION RECORD]]
+
+
+# SEQUENCE 08 - FIRST SUPERNATURAL EVENT
+
+
+The player must inspect X-17 again.
+
+
+[[PLAYER ACTION: CLICK X-17]]
+
+
+Observation mode opens.
+
+
+[[INSPECTION POINT: PETALS]]
+
+[[INSPECTION POINT: STEM]]
+
+[[INSPECTION POINT: ROOT AREA]]
+
+
+# PETAL EVENT
+
+
+[[PLAYER ACTION: CLICK PETALS]]
+
+
+ELIAS
+No visible change in--
+
+The petal moves.
+
+Elias stops speaking.
+
+Silence.
+
+
+ELIAS
+...What?
+
+
+[[DIALOGUE CHOICE]]
+
+
++ [INSPECT AGAIN]
+
+    The camera moves closer to the flower.
+
+    Nothing happens.
+
+    ELIAS
+    Probably water movement.
+
+    [[SET FLAG: REACTION = INVESTIGATE]]
+
+
++ [IGNORE IT]
+
+    Elias moves away from the flower.
+
+    ELIAS
+    Probably nothing.
+
+    [[SET FLAG: REACTION = IGNORE]]
+
+
+[[OBSERVATION MODE CLOSES]]
+
+
+Silence.
+
+Two seconds pass.
+
+The flower begins to glow.
+
+
+VFX: PETAL GLOW EFFECT.
+
+VFX: POLLEN PARTICLES INCREASE.
+
+SFX: LOW ETHEREAL HUM.
+
+
+ELIAS
+What the hell?
+
+
+[[OBJECTIVE UPDATED: INVESTIGATE THE CHANGE IN X-17]]
+
+
+[[PLAYER CONTROL ENABLED]]
+
+
+# MAIN HORROR TRIGGER
+
+
+[[PLAYER ACTION: CLICK GLOWING X-17]]
+
+
+Elias approaches the flower.
+
+The glow pulses once.
+
+Silence.
+
+
+PLANT
+(whispering)
+Elias.
+
+Elias immediately steps backward.
+
+
+ELIAS
+...Mara?
+
+No response.
+
+
+PLANT
+(whispering)
+Elias...
+
+
+VFX: SCREEN DISTORTION - 0.3 SECONDS.
+
+SFX: LOW HEARTBEAT.
+
+
+[[PLAYER CONTROL ENABLED]]
+
+
+Available reactions:
+
+[[HOTSPOT: INTERCOM]]
+
+[[HOTSPOT: GREENHOUSE EXIT]]
+
+[[HOTSPOT: X-17]]
+
+
+# BRANCH A - CALL MARA
+
+
+[[PLAYER ACTION: CLICK INTERCOM]]
+
+
+Elias activates the intercom.
+
+
+ELIAS
+Dr. Vale?
+
+SFX: RADIO STATIC.
+
+
+ELIAS
+Mara, are you there?
+
+Static continues.
+
+Then a faint voice emerges through the speaker.
+
+
+PLANT
+(through intercom)
+I'm here.
+
+The intercom shuts down.
+
+SFX: ELECTRICAL CLICK.
+
+
+ELIAS
+No.
+
+
+[[SET FLAG: FIRST_HORROR_RESPONSE = INTERCOM]]
+
+[[CONTINUE TO SCENE EXIT]]
+
+
+# BRANCH B - ATTEMPT TO LEAVE
+
+
+[[PLAYER ACTION: CLICK GREENHOUSE EXIT]]
+
+
+Elias walks quickly toward the door.
+
+
+PLANT
+(whispering)
+Don't go.
+
+Elias stops.
+
+The greenhouse lights flicker.
+
+VFX: LIGHT FLICKER.
+
+SFX: ELECTRICAL BUZZ.
+
+
+ELIAS
+Who's there?
+
+
+[[SET FLAG: FIRST_HORROR_RESPONSE = ESCAPE]]
+
+[[CONTINUE TO SCENE EXIT]]
+
+
+# BRANCH C - APPROACH THE FLOWER
+
+
+[[PLAYER ACTION: CLICK X-17 AGAIN]]
+
+
+Elias slowly approaches the flower.
+
+
+ELIAS
+Did you...
+
+A long pause.
+
+
+ELIAS
+No.
+
+The glow disappears.
+
+
+ELIAS
+I'm talking to a plant.
+
+
+[[SET FLAG: FIRST_HORROR_RESPONSE = FLOWER]]
+
+[[CONTINUE TO SCENE EXIT]]
+
+
+# SEQUENCE 09 - SCENE 1 EXIT
+
+
+[[OBJECTIVE UPDATED: LEAVE THE GREENHOUSE]]
+
+
+The player walks toward the greenhouse exit.
+
+
+[[PLAYER ACTION: USE ACCESS CARD ON EXIT PANEL]]
+
+
+SFX: CARD SCAN.
+
+SFX: ACCESS GRANTED.
+
+The door opens.
+
+Elias enters the corridor.
+
+The greenhouse door closes behind him.
+
+SFX: DOOR CLOSE.
+
+Silence.
+
+Elias begins walking away.
+
+SFX: SOFT KNOCK.
+
+Elias stops.
+
+He turns toward the greenhouse.
+
+Silence.
+
+Another knock.
+
+SFX: KNOCK.
+
+Elias slowly approaches the greenhouse window.
+
+Through the glass, X-17 remains inside its flowerpot.
+
+Everything appears normal.
+
+Then Elias notices something.
+
+A thin root extends from the flowerpot.
+
+It reaches across the greenhouse floor.
+
+The root is touching the inside of the greenhouse door.
+
+SFX: LOW HORROR STINGER.
+
+Elias stares at it.
+
+CUT TO BLACK.
+
+
+TITLE CARD:
+
+END OF DAY 1
+
+
+SFX: DISTANT WHISPER.
+
+
+PLANT
+(whispering)
+Elias...
+
+
+FADE OUT.
+
+
+# END OF SCENE 1
