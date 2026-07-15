@@ -1,0 +1,519 @@
+"""Scene 3 - Greenhouse Exploration (Member B)
+
+Player explores the greenhouse, finds the watering can,
+reads care instructions, and meets Specimen X-17.
+Includes the observation tutorial (inspect petals, stem, soil).
+"""
+
+import math
+import pygame
+from blooming.utils.utils import render_text, make_font, load_image
+from blooming.utils import COLORS
+from blooming.utils.particles import ParticleSystem
+
+
+class Scene3_Greenhouse:
+    """Scene 3: Greenhouse exploration and X-17 introduction."""
+
+    def __init__(self, game):
+        self.game = game
+        self.font = make_font(32)
+        self.small_font = make_font(24)
+        self.small_font2 = make_font(18)
+
+        # Hotspot rects
+        self.watering_can_rect = pygame.Rect(100, 400, 80, 80)
+        self.sink_rect = pygame.Rect(250, 400, 80, 80)
+        self.clipboard_rect = pygame.Rect(400, 400, 80, 80)
+        self.thermometer_rect = pygame.Rect(900, 100, 60, 120)
+        self.cabinet_rect = pygame.Rect(800, 400, 80, 80)
+        self.journal_rect = pygame.Rect(700, 400, 80, 80)
+        self.x17_rect = pygame.Rect(450, 250, 120, 120)
+        self.mara_rect = pygame.Rect(50, 300, 80, 180)
+
+        # State
+        self.watering_can_held = False
+        self.watering_can_filled = False
+        self.x17_interacted = False
+        self.x17_watered = False
+        self.mara_left = False
+        self.clipboard_read = False
+        self.journal_closed = False
+        self.entered = False
+        self.particles = ParticleSystem()
+
+        # Images
+        self.interior_img = load_image('greenhouse/greenhouse-interior.png')
+        self.flower_img = load_image('flower/flower.png')
+        self.watering_can_img = load_image('props/watering-can.png')
+        self.sink_img = load_image('props/sink.png')
+        self.clipboard_img = load_image('props/clipboard.png')
+        self.cabinet_img = load_image('props/cabinet.png')
+        self.thermometer_img = load_image('props/thermometer.png')
+        self.journal_img = load_image('props/journal.png')
+
+        # Observation state
+        self.observation_active = False
+        self.observed_petals = False
+        self.observed_stem = False
+        self.observed_soil = False
+        self.first_impression = None
+
+        # Care sheet display
+        self.showing_care_sheet = False
+
+    @property
+    def active(self):
+        return not self.entered
+
+    def draw(self, screen):
+        """Draw the greenhouse scene."""
+        if self.entered:
+            return
+
+        # Background
+        if self.interior_img:
+            screen.blit(pygame.transform.scale(self.interior_img,
+                                               (1024, 768)), (0, 0))
+        else:
+            screen.fill((30, 60, 30))
+            # Glass ceiling lines
+            for x in range(0, 1024, 100):
+                pygame.draw.line(screen, (80, 100, 80),
+                                 (x, 0), (x, 250), 2)
+            # Arc of ceiling
+            pygame.draw.arc(screen, (80, 100, 80),
+                            (0, 100, 1024, 300),
+                            3.14, 0, 10)
+
+        # Rows of plants (background)
+        for i in range(0, 1024, 150):
+            pygame.draw.rect(screen, (20, 80, 20), (i, 350, 60, 100))
+            pygame.draw.rect(screen, (40, 120, 40),
+                             (i + 10, 340, 40, 20))
+
+        # Watering can
+        if not self.watering_can_held:
+            if self.watering_can_img:
+                scaled = pygame.transform.scale(self.watering_can_img, (80, 80))
+                screen.blit(scaled, (self.watering_can_rect.x,
+                                     self.watering_can_rect.y))
+            else:
+                pygame.draw.rect(screen, COLORS['orange'],
+                                 self.watering_can_rect)
+                pygame.draw.rect(screen, COLORS['white'],
+                                 self.watering_can_rect, 1)
+
+        # Sink
+        if self.sink_img:
+            scaled = pygame.transform.scale(self.sink_img, (80, 80))
+            screen.blit(scaled, (self.sink_rect.x, self.sink_rect.y))
+        else:
+            pygame.draw.rect(screen, COLORS['blue'], self.sink_rect)
+            pygame.draw.rect(screen, COLORS['white'], self.sink_rect, 1)
+
+        # Clipboard
+        if self.clipboard_img:
+            scaled = pygame.transform.scale(self.clipboard_img, (80, 80))
+            screen.blit(scaled, (self.clipboard_rect.x,
+                                 self.clipboard_rect.y))
+        else:
+            pygame.draw.rect(screen, COLORS['yellow'], self.clipboard_rect)
+            pygame.draw.rect(screen, COLORS['white'],
+                             self.clipboard_rect, 1)
+
+        # Thermometer
+        if self.thermometer_img:
+            scaled = pygame.transform.scale(self.thermometer_img,
+                                            (60, 120))
+            screen.blit(scaled, (self.thermometer_rect.x,
+                                 self.thermometer_rect.y))
+        else:
+            pygame.draw.rect(screen, COLORS['gray'], self.thermometer_rect)
+            pygame.draw.rect(screen, COLORS['white'],
+                             self.thermometer_rect, 1)
+            temp_surf = render_text(make_font(12), "24°C",
+                                    COLORS['red'])
+            screen.blit(temp_surf, (910, 160))
+
+        # Cabinet
+        if self.cabinet_img:
+            scaled = pygame.transform.scale(self.cabinet_img, (80, 80))
+            screen.blit(scaled, (self.cabinet_rect.x,
+                                 self.cabinet_rect.y))
+        else:
+            pygame.draw.rect(screen, COLORS['dark_gray'], self.cabinet_rect)
+            pygame.draw.rect(screen, COLORS['white'],
+                             self.cabinet_rect, 1)
+
+        # Journal
+        if not self.journal_closed and self.journal_img:
+            scaled = pygame.transform.scale(self.journal_img, (80, 80))
+            screen.blit(scaled, (self.journal_rect.x,
+                                 self.journal_rect.y))
+        elif not self.journal_closed:
+            pygame.draw.rect(screen, COLORS['brown'], self.journal_rect)
+            pygame.draw.rect(screen, COLORS['white'],
+                             self.journal_rect, 1)
+
+        # Central specimen table
+        table_rect = pygame.Rect(400, 370, 220, 130)
+        pygame.draw.rect(screen, (100, 80, 60), table_rect)
+        pygame.draw.rect(screen, (130, 110, 80),
+                         pygame.Rect(405, 375, 210, 120))
+
+        # X-17 flower
+        if self.flower_img:
+            screen.blit(pygame.transform.scale(self.flower_img, (120, 120)),
+                        (460, 260))
+        else:
+            pygame.draw.rect(screen, COLORS['pink'], (460, 260, 120, 120))
+
+        # X-17 glow after watering
+        if self.x17_watered:
+            glow_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+            pulse = 100 + 50 * math.sin(pygame.time.get_ticks() * 0.003)
+            pygame.draw.circle(glow_surf,
+                               (255, 255, 200, int(pulse)),
+                               (100, 100), 100)
+            screen.blit(glow_surf, (410, 210))
+
+        # Label
+        label_surf = render_text(make_font(14), "SPECIMEN X-17",
+                                 COLORS['white'])
+        screen.blit(label_surf, (465, 380))
+
+        # Mara
+        if not self.mara_left:
+            mara_surf = pygame.Surface((80, 180), pygame.SRCALPHA)
+            pygame.draw.circle(mara_surf, COLORS['blue'], (40, 60), 30)
+            pygame.draw.rect(mara_surf, COLORS['blue'],
+                             pygame.Rect(10, 80, 60, 100))
+            screen.blit(mara_surf, (60, 300))
+            mara_lbl = render_text(make_font(14), "Mara",
+                                   COLORS['white'])
+            screen.blit(mara_lbl, (70, 490))
+
+        # Observation overlay
+        if self.observation_active:
+            self._draw_observation(screen)
+
+        # Care sheet overlay
+        if self.showing_care_sheet:
+            self._draw_care_sheet(screen)
+
+        # Particles
+        self.particles.update(0.016)
+        self.particles.draw(screen)
+
+    def _draw_observation(self, screen):
+        """Draw observation mode UI."""
+        overlay = pygame.Surface((1024, 768), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 100))
+        screen.blit(overlay, (0, 0))
+
+        # Hotspots for inspection
+        inspection_points = [
+            (460, 260, "PETALS"),
+            (510, 310, "STEM"),
+            (510, 380, "SOIL"),
+        ]
+        for px, py, label in inspection_points:
+            rect = pygame.Rect(px, py, 80, 40)
+            pygame.draw.rect(screen, COLORS['yellow'], rect)
+            pygame.draw.rect(screen, COLORS['white'], rect, 1)
+            lbl = render_text(make_font(12), label, COLORS['black'])
+            screen.blit(lbl, (px + 5, py + 10))
+
+    def _draw_care_sheet(self, screen):
+        """Draw the X-17 care instructions document."""
+        rect = pygame.Rect(250, 100, 524, 500)
+        pygame.draw.rect(screen, COLORS['white'], rect)
+        pygame.draw.rect(screen, COLORS['black'], rect, 3)
+
+        y_off = 130
+        title = render_text(make_font(28), "SPECIMEN X-17",
+                            COLORS['black'])
+        screen.blit(title, (rect.x + 20, y_off))
+        y_off += 40
+        subtitle = render_text(make_font(24), "DAILY CARE PROCEDURE",
+                               COLORS['gray'])
+        screen.blit(subtitle, (rect.x + 20, y_off))
+        y_off += 50
+
+        lines = [
+            "1. Confirm greenhouse temperature: 23-25°C",
+            "2. Inspect specimen for physical abnormalities",
+            "3. Provide 500 ml filtered water",
+            "4. Record unusual reactions",
+            "5. Do not relocate the specimen",
+        ]
+        for line in lines:
+            s = render_text(make_font(20), line, COLORS['black'])
+            screen.blit(s, (rect.x + 30, y_off))
+            y_off += 30
+
+        close_hint = render_text(make_font(16), "[Click anywhere to close]",
+                                 COLORS['gray'])
+        screen.blit(close_hint, (rect.x + 20, rect.y + rect.height - 40))
+
+    def update(self, events: list):
+        """Handle greenhouse interactions."""
+        if self.entered:
+            return
+
+        # Add ambient particles
+        if len(self.particles.particles) < 10:
+            self.particles.add_ambient(510, 300, 1)
+
+        for event in events:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                pos = event.pos
+
+                # Close care sheet
+                if self.showing_care_sheet:
+                    self.showing_care_sheet = False
+                    continue
+
+                # Observation mode
+                if self.observation_active:
+                    if pygame.Rect(460, 260, 80, 40).collidepoint(pos):
+                        self._inspect_petals()
+                    elif pygame.Rect(510, 310, 80, 40).collidepoint(pos):
+                        self._inspect_stem()
+                    elif pygame.Rect(510, 380, 80, 40).collidepoint(pos):
+                        self._inspect_soil()
+                    continue
+
+                # Watering can
+                if self.watering_can_rect.collidepoint(pos):
+                    if not self.watering_can_held:
+                        self.watering_can_held = True
+                        self.game.inventory.add_item('watering_can',
+                                                     'Empty Watering Can')
+                        self.game.dialogue.show_dialogue(
+                            "Standard watering can.",
+                            "Elias")
+                    elif not self.watering_can_filled:
+                        self._try_fill_water()
+
+                # Sink
+                elif self.sink_rect.collidepoint(pos):
+                    if self.watering_can_held and not self.watering_can_filled:
+                        self._try_fill_water()
+                    elif self.watering_can_held and self.watering_can_filled:
+                        self.game.dialogue.show_dialogue(
+                            "Already filled with 500 ml.",
+                            "Elias")
+                    else:
+                        self.game.dialogue.show_dialogue(
+                            "Filtered water system.\nSpecimens here don't "
+                            "receive water directly from the main supply.",
+                            "Elias")
+
+                # Clipboard
+                elif self.clipboard_rect.collidepoint(pos):
+                    if not self.clipboard_read:
+                        self.showing_care_sheet = True
+                        self.clipboard_read = True
+                        self.game.journal.add_objective('obj_read_care',
+                                                        'Read Care Instructions',
+                                                        'Find X-17 care sheet')
+                    else:
+                        self.game.dialogue.show_dialogue(
+                            "Daily care: 23-25°C, inspect for abnormalities, "
+                            "500 ml filtered water, record reactions, "
+                            "do not relocate.",
+                            "Elias")
+
+                # Thermometer
+                elif self.thermometer_rect.collidepoint(pos):
+                    self.game.dialogue.show_dialogue(
+                        "Greenhouse thermometer: 24 degrees Celsius.\n"
+                        "Within the required range.",
+                        "Elias")
+
+                # Cabinet
+                elif self.cabinet_rect.collidepoint(pos):
+                    self.game.dialogue.show_dialogue(
+                        "Storage cabinet. Contains general supplies "
+                        "and extra pots.",
+                        "Elias")
+
+                # Journal
+                elif self.journal_rect.collidepoint(pos) and not self.journal_closed:
+                    self._interact_journal()
+
+                # X-17
+                elif self.x17_rect.collidepoint(pos):
+                    if not self.x17_interacted:
+                        self._first_meet_x17()
+                    elif not self.x17_watered:
+                        self._observe_x17()
+                    else:
+                        self._x17_after_water()
+
+                # Mara
+                elif self.mara_rect.collidepoint(pos):
+                    if not self.mara_left:
+                        self.game.dialogue.show_dialogue(
+                            "Go ahead.\nLook around.\nIf you're going to work "
+                            "here, learn where everything is.",
+                            "Mara")
+
+    def _first_meet_x17(self):
+        """First interaction with X-17 - dialogue and observation."""
+        self.x17_interacted = True
+        self.observation_active = True
+        self.game.dialogue.show_dialogue(
+            "This is why you're here.\nThat's it?\nDisappointed?\nA little.\n"
+            "Specimen X-17.\nRecovered three weeks ago from an undocumented "
+            "forest region.",
+            "Mara")
+        self.game.dialogue.show_dialogue(
+            "Species?\nUnknown.\nGenus?\nUnknown.\nFamily?\nIf we knew that, "
+            "Elias, we wouldn't need you.",
+            "Mara")
+
+        self.game.dialogue.show_dialogue(
+            "Before you do anything...\nInspect it.\nWhat am I looking for?\n"
+            "You tell me.",
+            "Mara")
+        self.game.journal.add_objective('obj_inspect_x17',
+                                        'Inspect X-17',
+                                        'Examine petals, stem, and soil')
+
+    def _observe_x17(self):
+        """Second X-17 interaction - observation mode."""
+        self.observation_active = True
+        self.game.dialogue.show_dialogue(
+            "Inspect X-17 for changes.\nCheck petals, stem, and soil.",
+            "Mara",
+            ["Inspect petals", "Inspect stem", "Inspect soil"],
+            lambda c: None)
+
+    def _x17_after_water(self):
+        """X-17 interaction after watering."""
+        self.game.dialogue.show_dialogue(
+            "Nothing happens.\nThat's it?\nWhat were you expecting?\n"
+            "I don't know.\nThat's research.",
+            "Elias")
+
+    def _inspect_petals(self):
+        """Inspect X-17 petals."""
+        self.observed_petals = True
+        self.game.dialogue.show_dialogue(
+            "Closed petals.\nPale coloration.\nNo visible physical damage.",
+            "Elias")
+
+    def _inspect_stem(self):
+        """Inspect X-17 stem."""
+        self.observed_stem = True
+        self.game.dialogue.show_dialogue(
+            "Stem is upright.\nNo visible lesions.\nSlight discoloration "
+            "near the base.",
+            "Elias")
+
+    def _inspect_soil(self):
+        """Inspect X-17 soil - triggers watering choice."""
+        self.observed_soil = True
+        self.game.dialogue.show_dialogue(
+            "The soil is dry.\nWhich means?",
+            "Mara",
+            ["Water it.", "Change the soil.", "Move it into sunlight."],
+            lambda c: self._soil_choice(c))
+
+    def _soil_choice(self, choice: str):
+        """Handle soil inspection choice."""
+        if choice == "Water it.":
+            self.game.dialogue.show_dialogue(
+                "Water it.\nExactly.",
+                "Elias",
+                ["Pick up watering can", "Read care sheet"],
+                lambda c: self._start_watering())
+            self.game.journal.complete_objective('obj_inspect_x17')
+        elif choice == "Change the soil.":
+            self.game.dialogue.show_dialogue(
+                "Change the soil?\nNo.\nStart with the obvious problem.\nThe "
+                "soil is dry.",
+                "Mara",
+                ["Water it."],
+                lambda c: self._soil_choice("Water it."))
+        else:
+            self.game.dialogue.show_dialogue(
+                "What was the rule outside?\nDon't move the specimens.\nGood. "
+                "So don't.",
+                "Mara",
+                ["Water it."],
+                lambda c: self._soil_choice("Water it."))
+
+    def _start_watering(self):
+        """Begin the watering puzzle."""
+        self.game.journal.add_objective('obj_water_x17',
+                                        'Prepare 500 ml Water',
+                                        'Fill watering can at the sink')
+        self.game.dialogue.show_dialogue(
+            "You already found the watering can.\nWhere would you fill it?",
+            "Mara")
+
+    def _try_fill_water(self):
+        """Attempt to fill the watering can."""
+        if not self.clipboard_read:
+            self.game.dialogue.show_dialogue(
+                "How much water?\nCheck the care sheet.",
+                "Mara")
+            self.game.dialogue.show_dialogue(
+                "You could just tell me.\nI could.\nCheck the care sheet.",
+                "Mara")
+            return
+
+        self.game.dialogue.show_dialogue(
+            "How much water?",
+            "Elias",
+            ["250 ml", "500 ml", "750 ml"],
+            lambda c: self._water_quantity(c))
+
+    def _water_quantity(self, quantity: str):
+        """Handle water quantity selection."""
+        if quantity == "250 ml":
+            self.game.dialogue.show_dialogue(
+                "Two hundred and fifty.\nRead the care sheet again.",
+                "Elias")
+            self.game.inventory.items['watering_can']['name'] = 'Empty Watering Can'
+            self.watering_can_filled = False
+        elif quantity == "500 ml":
+            self.watering_can_filled = True
+            self.game.inventory.items['watering_can']['name'] = 'Can (500 ml)'
+            self.game.dialogue.show_dialogue(
+                "Five hundred milliliters.\nGood.",
+                "Elias")
+            self.game.journal.update_objective('obj_water_x17',
+                                               'Water X-17 with 500 ml',
+                                               'Use watering can on X-17')
+            self.game.journal.add_objective('obj_water_x17_done',
+                                            'Water X-17',
+                                            'Apply 500 ml to the specimen')
+        else:
+            self.game.dialogue.show_dialogue(
+                "Seven hundred and fifty.\nYou're caring for it, Elias.\n"
+                "Not drowning it.",
+                "Mara")
+            self.game.inventory.items['watering_can']['name'] = 'Empty Watering Can'
+            self.watering_can_filled = False
+
+    def _interact_journal(self):
+        """Interact with the old research journal."""
+        self.journal_closed = True
+        self.game.dialogue.show_dialogue(
+            "Whose journal is this?\nLeave that.\nWhy?\nOld research notes.\n"
+            "From X-17?\nI said leave it.",
+            "Elias")
+
+        # Mara approaches
+        self.game.dialogue.show_dialogue(
+            "Come here.\nThere's something you need to see.",
+            "Mara")
+        self.game.journal.update_objective('obj_inspect_x17',
+                                           'Meet Mara at the specimen table',
+                                           'Inspect X-17')
+

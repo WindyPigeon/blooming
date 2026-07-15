@@ -1,91 +1,83 @@
 # The Blooming - 2D Point-and-Click Psychological Horror Game
 
-A complete Python/Pygame implementation of the psychological horror game based on the screenplay.
+Group 24 - CT029-3-2-Imaging and Special Effects
+
+## Structure
+
+```
+blooming/
+├── main.py              Entry point - wires all systems together
+├── __init__.py          Package init
+├── __main__.py          python -m blooming entry
+├── utils/               Shared game systems
+│   ├── __init__.py      Constants (COLORS, SCREEN dims)
+│   ├── utils.py         load_image, render_text, make_font
+│   ├── particles.py     ParticleSystem (pollen, spore, glow)
+│   ├── screen_shake.py  ScreenShake class
+│   ├── sanity.py        SanitySystem
+│   ├── inventory.py     Inventory
+│   ├── journal.py       Journal
+│   └── dialogue.py      DialogueSystem
+├── scenes/              Chapter scenes (one per team member)
+│   ├── __init__.py
+│   ├── scene1_arrival.py     Member A - Arrival & Orientation
+│   ├── scene3_greenhouse.py  Member B - Greenhouse Exploration
+│   ├── scene4_care.py        Member C - Plant Care & Watering
+│   └── scene5_horror.py      Member D - Supernatural & Ending
+├── assets/
+│   └── images/              Concept art goes here
+│       ├── greenhouse/
+│       ├── flower/
+│       ├── props/
+│       ├── char/
+│       └── ending/
+├── requirements.txt
+└── README.md
+```
 
 ## Requirements
 
 - Python 3.8+
 - Pygame 2.0+
+- Pillow 10.0+
 
-Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-## How to Run
+## Run
 
 ```bash
 cd blooming
-python main.py
-```
-
-Or:
-
-```bash
 python -m blooming
 ```
 
 ## Controls
 
-- **Mouse**: Click hotspots to interact with objects, characters, and hotspots
-- **ESC**: Quit the game
-- **I**: Toggle inventory (visible by default at bottom)
-- **J**: Toggle journal (shows objectives and notes)
+- **Mouse**: Click hotspots to interact
+- **ESC**: Quit
+- **J**: Toggle journal
 
-## Gameplay Features
+## Team Chapters
 
-- **Point-and-click navigation**: Explore environments by clicking hotspots
-- **Inventory system**: Collect and use items (access card, watering can)
-- **Dialogue system**: Interact with characters and make choices
-- **Observation mode**: Inspect specimens for clues
-- **Puzzle solving**: Fill watering can with correct amount, use access card
-- **Sanity meter**: Monitor sanity level during horror sequences
-- **Particle effects**: Pollen, glow, and spore effects
-- **Screen shake**: Distortion effects during horror sequences
-- **Journal**: Track objectives and notes
+| Member | Chapter | Scenes |
+|--------|---------|--------|
+| A | Arrival & Orientation | Scene1 (exterior), Scene2 (corridor) |
+| B | Greenhouse | Scene3 (exploration, X-17 intro, observation) |
+| C | Plant Care | Scene4 (watering puzzle, Mara leaves) |
+| D | Supernatural | Scene5 (horror sequence, ending) |
 
-## Scenes
+## Gameplay Flow
 
-1. **Scene 1 - Arrival**: Arrive at facility, interact with Mara, get access card, enter
-2. **Scene 2 - Orientation**: Facility tour, follow Mara to greenhouse
-3. **Scene 3 - Greenhouse**: Explore, find watering can, inspect X-17, water with 500ml
-4. **Scene 4 - Blooming**: Supernatural event, X-17 glows, whispers, horror sequences
-5. **Scene 5 - Ending**: The Blooming conclusion
+1. **Chapter 1**: Arrive at facility, meet Mara, get access card, enter
+2. **Chapter 2**: Explore greenhouse, find watering can, read care sheet, inspect X-17
+3. **Chapter 3**: Water X-17 with 500 ml, Mara gets paged to Lab Two, leaves
+4. **Chapter 4**: X-17 glows, supernatural whispers, horror response, ending
 
-## Hotspots
+## Assets Needed
 
-### Scene 1 (Arrival)
-- Facility sign
-- Security intercom  
-- Security door
-- Security panel (for access card)
-- Dr. Mara Vale
+See the asset prompts in the project documentation. Priority order:
 
-### Scene 2 (Orientation)
-- Restricted Laboratory door
-- Staff Office door
-- Storage door
-- Greenhouse door
-- Dr. Mara Vale
-
-### Scene 3 (Greenhouse)
-- Watering can
-- Filtered water sink
-- Care instruction clipboard
-- Greenhouse thermometer
-- Storage cabinet
-- Old research journal
-- Specimen X-17
-- Dr. Mara Vale
-
-## Game Flow
-
-1. Talk to Mara to receive access card
-2. Select access card and use on security panel to enter
-3. Follow Mara through facility to greenhouse
-4. Take watering can and fill with 500ml filtered water
-5. Read care instructions
-6. Water X-17 with 500ml
-7. Experience supernatural events as X-17 glows and whispers
-8. Make horror response choices
-9. End of Day 1
+1. **HIGH**: Exterior background, corridor background, X-17 flower, Mara sprite
+2. **MEDIUM**: Greenhouse interior, watering can, sink, clipboard, care sheet
+3. **LOW**: Cabinet, thermometer, journal, sign, intercom, root sprite

@@ -1,6 +1,4 @@
-"""
-Blooming package - 2D Point-and-Click Psychological Horror Game
-"""
+"""Blooming package - 2D Point-and-Click Psychological Horror Game"""
 
 from blooming.main import Game, main
 
