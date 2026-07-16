@@ -7,7 +7,7 @@ Includes the observation tutorial (inspect petals, stem, soil).
 
 import math
 import pygame
-from blooming.utils.utils import render_text, make_font, load_image
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
 from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
 
@@ -29,7 +29,18 @@ class Scene3_Greenhouse:
         self.cabinet_rect = pygame.Rect(800, 400, 80, 80)
         self.journal_rect = pygame.Rect(700, 400, 80, 80)
         self.x17_rect = pygame.Rect(450, 250, 120, 120)
-        self.mara_rect = pygame.Rect(50, 300, 80, 180)
+        self.mara_rect = pygame.Rect(162, 30, 700, 708)
+
+        # Greenhouse intro state
+        self.intro_dialogue_done = False
+        self.intro_lines = [
+            ("Go ahead.", "Mara"),
+            ("Go ahead with what?", "Elias"),
+            ("Look around.", "Mara"),
+            ("If you're going to work here,\nlearn where everything is.", "Mara"),
+        ]
+        self.intro_idx = 0
+        self.mara_arrived_table = False
 
         # State
         self.watering_can_held = False
@@ -40,17 +51,20 @@ class Scene3_Greenhouse:
         self.clipboard_read = False
         self.journal_closed = False
         self.entered = False
+        self.phase = 'greenhouse_intro'
         self.particles = ParticleSystem()
 
         # Images
-        self.interior_img = load_image('greenhouse/greenhouse-interior.png')
-        self.flower_img = load_image('flower/flower.png')
+        self.interior_img = load_image('backgrounds/greenhouse-interior.png')
+        self.flower_img = load_image('props/flower.png')
         self.watering_can_img = load_image('props/watering-can.png')
         self.sink_img = load_image('props/sink.png')
         self.clipboard_img = load_image('props/clipboard.png')
-        self.cabinet_img = load_image('props/cabinet.png')
+        self.cabinet_img = load_image('props/storage-cabinet.png')
         self.thermometer_img = load_image('props/thermometer.png')
-        self.journal_img = load_image('props/journal.png')
+        self.journal_img = load_image('props/old-journal.png')
+        self.mara_img = load_image('char/mara-vale.png')
+        self.specimen_table_img = load_image('props/specimen-table.png')
 
         # Observation state
         self.observation_active = False
@@ -64,17 +78,17 @@ class Scene3_Greenhouse:
 
     @property
     def active(self):
-        return not self.entered
+        return self.phase != 'entered'
 
     def draw(self, screen):
         """Draw the greenhouse scene."""
-        if self.entered:
+        if self.phase == 'entered':
             return
 
         # Background
         if self.interior_img:
-            screen.blit(pygame.transform.scale(self.interior_img,
-                                               (1024, 768)), (0, 0))
+            bg_scaled, bx, by = scale_image_keep_ratio(self.interior_img, 1024, 768)
+            screen.blit(bg_scaled, (bx, by))
         else:
             screen.fill((30, 60, 30))
             # Glass ceiling lines
@@ -95,9 +109,9 @@ class Scene3_Greenhouse:
         # Watering can
         if not self.watering_can_held:
             if self.watering_can_img:
-                scaled = pygame.transform.scale(self.watering_can_img, (80, 80))
-                screen.blit(scaled, (self.watering_can_rect.x,
-                                     self.watering_can_rect.y))
+                scaled, sx, sy = scale_image_keep_ratio(self.watering_can_img, 80, 80)
+                screen.blit(scaled, (self.watering_can_rect.x + sx,
+                                     self.watering_can_rect.y + sy))
             else:
                 pygame.draw.rect(screen, COLORS['orange'],
                                  self.watering_can_rect)
@@ -106,17 +120,17 @@ class Scene3_Greenhouse:
 
         # Sink
         if self.sink_img:
-            scaled = pygame.transform.scale(self.sink_img, (80, 80))
-            screen.blit(scaled, (self.sink_rect.x, self.sink_rect.y))
+            scaled, sx, sy = scale_image_keep_ratio(self.sink_img, 80, 80)
+            screen.blit(scaled, (self.sink_rect.x + sx, self.sink_rect.y + sy))
         else:
             pygame.draw.rect(screen, COLORS['blue'], self.sink_rect)
             pygame.draw.rect(screen, COLORS['white'], self.sink_rect, 1)
 
         # Clipboard
         if self.clipboard_img:
-            scaled = pygame.transform.scale(self.clipboard_img, (80, 80))
-            screen.blit(scaled, (self.clipboard_rect.x,
-                                 self.clipboard_rect.y))
+            scaled, sx, sy = scale_image_keep_ratio(self.clipboard_img, 80, 80)
+            screen.blit(scaled, (self.clipboard_rect.x + sx,
+                                 self.clipboard_rect.y + sy))
         else:
             pygame.draw.rect(screen, COLORS['yellow'], self.clipboard_rect)
             pygame.draw.rect(screen, COLORS['white'],
@@ -124,10 +138,9 @@ class Scene3_Greenhouse:
 
         # Thermometer
         if self.thermometer_img:
-            scaled = pygame.transform.scale(self.thermometer_img,
-                                            (60, 120))
-            screen.blit(scaled, (self.thermometer_rect.x,
-                                 self.thermometer_rect.y))
+            scaled, sx, sy = scale_image_keep_ratio(self.thermometer_img, 60, 120)
+            screen.blit(scaled, (self.thermometer_rect.x + sx,
+                                 self.thermometer_rect.y + sy))
         else:
             pygame.draw.rect(screen, COLORS['gray'], self.thermometer_rect)
             pygame.draw.rect(screen, COLORS['white'],
@@ -138,9 +151,9 @@ class Scene3_Greenhouse:
 
         # Cabinet
         if self.cabinet_img:
-            scaled = pygame.transform.scale(self.cabinet_img, (80, 80))
-            screen.blit(scaled, (self.cabinet_rect.x,
-                                 self.cabinet_rect.y))
+            scaled, sx, sy = scale_image_keep_ratio(self.cabinet_img, 80, 80)
+            screen.blit(scaled, (self.cabinet_rect.x + sx,
+                                 self.cabinet_rect.y + sy))
         else:
             pygame.draw.rect(screen, COLORS['dark_gray'], self.cabinet_rect)
             pygame.draw.rect(screen, COLORS['white'],
@@ -148,9 +161,9 @@ class Scene3_Greenhouse:
 
         # Journal
         if not self.journal_closed and self.journal_img:
-            scaled = pygame.transform.scale(self.journal_img, (80, 80))
-            screen.blit(scaled, (self.journal_rect.x,
-                                 self.journal_rect.y))
+            scaled, sx, sy = scale_image_keep_ratio(self.journal_img, 80, 80)
+            screen.blit(scaled, (self.journal_rect.x + sx,
+                                 self.journal_rect.y + sy))
         elif not self.journal_closed:
             pygame.draw.rect(screen, COLORS['brown'], self.journal_rect)
             pygame.draw.rect(screen, COLORS['white'],
@@ -158,14 +171,19 @@ class Scene3_Greenhouse:
 
         # Central specimen table
         table_rect = pygame.Rect(400, 370, 220, 130)
-        pygame.draw.rect(screen, (100, 80, 60), table_rect)
-        pygame.draw.rect(screen, (130, 110, 80),
-                         pygame.Rect(405, 375, 210, 120))
+        if self.specimen_table_img:
+            table_scaled, tx, ty = scale_image_keep_ratio(
+                self.specimen_table_img, table_rect.width, table_rect.height)
+            screen.blit(table_scaled, (table_rect.x + tx, table_rect.y + ty))
+        else:
+            pygame.draw.rect(screen, (100, 80, 60), table_rect)
+            pygame.draw.rect(screen, (130, 110, 80),
+                             pygame.Rect(405, 375, 210, 120))
 
         # X-17 flower
         if self.flower_img:
-            screen.blit(pygame.transform.scale(self.flower_img, (120, 120)),
-                        (460, 260))
+            flower_scaled, fx, fy = scale_image_keep_ratio(self.flower_img, 120, 120)
+            screen.blit(flower_scaled, (460 + fx, 260 + fy))
         else:
             pygame.draw.rect(screen, COLORS['pink'], (460, 260, 120, 120))
 
@@ -184,14 +202,20 @@ class Scene3_Greenhouse:
         screen.blit(label_surf, (465, 380))
 
         # Mara
-        if not self.mara_left:
+        if not self.mara_left and self.mara_img:
+            mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
+            screen.blit(mara_scaled, (162 + mfx, mfy))
+            mara_lbl = render_text(make_font(14), "Mara",
+                                    COLORS['white'])
+            screen.blit(mara_lbl, (262, 600))
+        elif not self.mara_left:
             mara_surf = pygame.Surface((80, 180), pygame.SRCALPHA)
             pygame.draw.circle(mara_surf, COLORS['blue'], (40, 60), 30)
             pygame.draw.rect(mara_surf, COLORS['blue'],
                              pygame.Rect(10, 80, 60, 100))
             screen.blit(mara_surf, (60, 300))
             mara_lbl = render_text(make_font(14), "Mara",
-                                   COLORS['white'])
+                                    COLORS['white'])
             screen.blit(mara_lbl, (70, 490))
 
         # Observation overlay
@@ -259,8 +283,19 @@ class Scene3_Greenhouse:
 
     def update(self, events: list):
         """Handle greenhouse interactions."""
-        if self.entered:
+        if self.phase == 'entered':
             return
+
+        # Intro dialogue auto-play
+        if self.phase == 'greenhouse_intro' and not self.intro_dialogue_done:
+            if not self.game.dialogue.current_dialogue:
+                if self.intro_idx < len(self.intro_lines):
+                    text, speaker = self.intro_lines[self.intro_idx]
+                    self.game.dialogue.show_dialogue(text, speaker)
+                    self.intro_idx += 1
+                else:
+                    self.intro_dialogue_done = True
+                    self.phase = 'explore'
 
         # Add ambient particles
         if len(self.particles.particles) < 10:
@@ -346,12 +381,25 @@ class Scene3_Greenhouse:
 
                 # X-17
                 elif self.x17_rect.collidepoint(pos):
-                    if not self.x17_interacted:
-                        self._first_meet_x17()
-                    elif not self.x17_watered:
-                        self._observe_x17()
-                    else:
-                        self._x17_after_water()
+                    if self.phase == 'explore':
+                        if not self.x17_interacted:
+                            self._first_meet_x17()
+                        elif not self.x17_watered:
+                            self._observe_x17()
+                        else:
+                            self._x17_after_water()
+                    elif self.phase == 'watering':
+                        if self.watering_can_held and self.watering_can_filled and '500' in self.game.inventory.items.get('watering_can', {}).get('name', ''):
+                            self._water_x17_from_scene3()
+                        elif self.watering_can_held and 'Empty' in self.game.inventory.items.get('watering_can', {}).get('name', ''):
+                            self.game.dialogue.show_dialogue(
+                                "The watering can is empty.\nI need to fill it with 500 ml "
+                                "filtered water.",
+                                "Elias")
+                        elif not self.watering_can_held:
+                            self.game.dialogue.show_dialogue(
+                                "I need to select the watering can first.",
+                                "Elias")
 
                 # Mara
                 elif self.mara_rect.collidepoint(pos):
@@ -398,6 +446,65 @@ class Scene3_Greenhouse:
             "Nothing happens.\nThat's it?\nWhat were you expecting?\n"
             "I don't know.\nThat's research.",
             "Elias")
+        self.game.journal.add_objective('obj_wait',
+                                         'Wait for reaction',
+                                         'Observe X-17 for changes')
+
+    def _water_x17_from_scene3(self):
+        """Water X-17 from Scene 3 and trigger transition to Scene 4."""
+        self.x17_watered = True
+        self.watering_can_filled = False
+        can = self.game.inventory.items.get('watering_can', {})
+        if '500' in can.get('name', ''):
+            can['name'] = 'Empty Watering Can'
+        self.game.journal.complete_objective('obj_water_x17_done')
+        self.game.journal.add_objective('obj_wait',
+                                         'Wait for reaction',
+                                         'Observe X-17 for changes')
+        self.game.journal.update_objective('obj_water_x17_done',
+                                            'Water X-17 with 500 ml',
+                                            'Use watering can on X-17')
+        self._play_transition_dialogue()
+
+    def _play_transition_dialogue(self):
+        """Play radio call and Mara leaving dialogue, then transition to Scene 4."""
+        self.game.dialogue.show_dialogue(
+            "Elias carefully waters the plant.\nSlowly.\nThe watering "
+            "finishes.",
+            "Elias")
+        self.game.dialogue.show_dialogue(
+            "SFX: Radio static crackles through the greenhouse.",
+            "System")
+        self.game.dialogue.show_dialogue(
+            "Dr. Vale.\nReport to Lab Two immediately.\nI'm coming.",
+            "Radio")
+        self.game.dialogue.show_dialogue(
+            "Finish the observation record.\nThen leave.\nYou're leaving me "
+            "here?\nIt's a greenhouse, Elias.\nWhat could happen?",
+            "Mara")
+        self.game.dialogue.show_dialogue(
+            "Elias.\nIf you hear anything unusual--\nNothing.\nFinish your "
+            "work.",
+            "Mara")
+        self.game.dialogue.show_dialogue(
+            "SFX: Greenhouse door closes.\nSFX: Electronic lock engages.\nThe "
+            "greenhouse ambience becomes quieter.",
+            "System")
+        self.game.sanity.decrease_sanity(5)
+        self.game.journal.update_objective('obj_wait',
+                                            'Complete observation',
+                                            'Inspect X-17 again')
+        self.game.flags['x17_watered'] = True
+        self.game.flags['mara_left'] = True
+        self.game.journal.add_objective('obj_horror',
+                                         'Inspect X-17',
+                                         'Observe X-17 for supernatural changes')
+        self._transition_to_scene4()
+
+    def _transition_to_scene4(self):
+        """Transition to Scene 4 after Mara leaves."""
+        from blooming.scenes.scene4_care import Scene4_Care
+        self.game.current_scene = Scene4_Care(self.game)
 
     def _inspect_petals(self):
         """Inspect X-17 petals."""
@@ -472,6 +579,14 @@ class Scene3_Greenhouse:
             "Elias",
             ["250 ml", "500 ml", "750 ml"],
             lambda c: self._water_quantity(c))
+
+    def _trigger_scene4_transition(self):
+        """Transition to Scene 4 after Mara leaves."""
+        from blooming.scenes.scene4_care import Scene4_Care
+        self.game.current_scene = Scene4_Care(self.game)
+        self.game.journal.add_objective('obj_horror',
+                                         'Inspect X-17',
+                                         'Observe X-17 for supernatural changes')
 
     def _water_quantity(self, quantity: str):
         """Handle water quantity selection."""

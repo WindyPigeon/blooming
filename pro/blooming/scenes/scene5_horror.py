@@ -7,7 +7,7 @@ Includes screen shake, hallucination, and title card.
 
 import math
 import pygame
-from blooming.utils.utils import render_text, make_font, load_image
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
 from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
 from blooming.utils.screen_shake import ScreenShake
@@ -29,12 +29,15 @@ class Scene5_Horror:
         self.response_given = False
 
         # Images
-        self.interior_img = load_image('greenhouse/greenhouse-interior.png')
-        self.flower_glow_img = load_image('flower/flower-glow.png')
-        self.flower_img = load_image('flower/flower.png')
-        self.heart_img = load_image('heart.png')
+        self.interior_img = load_image('backgrounds/greenhouse-horror.png')
+        self.flower_glow_img = load_image('props/flower-glow.png')
+        self.flower_img = load_image('props/flower.png')
+        self.flower_closed_img = load_image('props/flower-glowing-closed.png')
+        self.heart_img = load_image('ending/heart-pulse.png')
         self.root_img = load_image('ending/root.png')
         self.title_img = load_image('ending/title-card.png')
+        self.vine_img = load_image('vfx/vine-overlay.png')
+        self.flicker_img = load_image('vfx/screen-flicker.png')
 
         # Effects
         self.particles = ParticleSystem()
@@ -59,8 +62,8 @@ class Scene5_Horror:
 
         # Background
         if self.interior_img:
-            scaled = pygame.transform.scale(self.interior_img, (1024, 768))
-            screen.blit(scaled, (0, 0))
+            bg_scaled, bx, by = scale_image_keep_ratio(self.interior_img, 1024, 768)
+            screen.blit(bg_scaled, (bx, by))
         else:
             # Darken background progressively
             darkness = min(200, self.phase * 40)
@@ -81,20 +84,27 @@ class Scene5_Horror:
         screen.blit(table_surf, (400, 370))
 
         # X-17 glow effect
-        if self.phase >= 1 and self.flower_glow_img:
+        if self.phase >= 3 and self.flower_closed_img:
+            glow_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
+            pulse = 150 + 80 * math.sin(self.timer * 0.15)
+            glow_surf.fill((255, 200, 150, int(pulse)))
+            screen.blit(glow_surf, (SCREEN_WIDTH // 2 - 100, 200))
+            flower_scaled, ffx, ffy = scale_image_keep_ratio(self.flower_closed_img, 150, 150)
+            screen.blit(flower_scaled, (SCREEN_WIDTH // 2 - 75 + ffx, 200 + ffy))
+        elif self.phase >= 1 and self.flower_glow_img:
             glow_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
             pulse = 100 + 50 * math.sin(self.timer * 0.1)
             glow_surf.fill((255, 255, pulse, 100))
             screen.blit(glow_surf, (SCREEN_WIDTH // 2 - 100, 200))
-            scaled = pygame.transform.scale(self.flower_glow_img, (150, 150))
-            screen.blit(scaled, (SCREEN_WIDTH // 2 - 75, 200))
+            flower_scaled, ffx, ffy = scale_image_keep_ratio(self.flower_glow_img, 150, 150)
+            screen.blit(flower_scaled, (SCREEN_WIDTH // 2 - 75 + ffx, 200 + ffy))
         elif self.phase >= 1 and self.flower_img:
             glow_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
             pulse = 100 + 50 * math.sin(self.timer * 0.1)
             glow_surf.fill((255, 255, pulse, 100))
             screen.blit(glow_surf, (SCREEN_WIDTH // 2 - 100, 200))
-            scaled = pygame.transform.scale(self.flower_img, (150, 150))
-            screen.blit(scaled, (SCREEN_WIDTH // 2 - 75, 200))
+            flower_scaled, ffx, ffy = scale_image_keep_ratio(self.flower_img, 150, 150)
+            screen.blit(flower_scaled, (SCREEN_WIDTH // 2 - 75 + ffx, 200 + ffy))
         elif self.phase >= 1:
             glow_surf = pygame.Surface((200, 200), pygame.SRCALPHA)
             pulse = 100 + 50 * math.sin(self.timer * 0.1)
@@ -104,7 +114,10 @@ class Scene5_Horror:
                              (SCREEN_WIDTH // 2 - 60, 210, 120, 120))
 
         # Phase 2+: vines/roots growing
-        if self.phase >= 2:
+        if self.phase >= 2 and self.vine_img:
+            vine_scaled, vx, vy = scale_image_keep_ratio(self.vine_img, 1024, 768)
+            screen.blit(vine_scaled, (vx, vy))
+        elif self.phase >= 2:
             for i in range(5):
                 vine_color = (128, 0, 128)
                 y1 = 500 + i * 20
@@ -122,8 +135,8 @@ class Scene5_Horror:
         # Phase 4: title card
         if self.phase >= 4:
             if self.title_img:
-                screen.blit(pygame.transform.scale(self.title_img,
-                                                   (1024, 768)), (0, 0))
+                title_scaled, tx, ty = scale_image_keep_ratio(self.title_img, 1024, 768)
+                screen.blit(title_scaled, (tx, ty))
             else:
                 self._draw_title_card(screen)
 
@@ -202,6 +215,15 @@ class Scene5_Horror:
             self.game.journal.add_objective('ending',
                                             'End of Day 1',
                                             'The greenhouse door closes behind you')
+            if not hasattr(self, '_ending_timer'):
+                self._ending_timer = 0
+            self._ending_timer = 300  # 5 seconds before ending
+
+        elif self.phase == 4:
+            if hasattr(self, '_ending_timer'):
+                self._ending_timer -= 1
+                if self._ending_timer <= 0:
+                    self._go_to_ending()
 
         # Spawn spores during horror
         if self.phase >= 1 and self.timer % 10 == 0:
@@ -214,7 +236,10 @@ class Scene5_Horror:
         else:
             self.flicker_active = False
 
-        if self.flicker_active:
+        if self.flicker_active and self.flicker_img:
+            flicker_scaled, fx, fy = scale_image_keep_ratio(self.flicker_img, 1024, 768)
+            self.game.screen.blit(flicker_scaled, (fx, fy))
+        elif self.flicker_active:
             flicker_surf = pygame.Surface((1024, 768), pygame.SRCALPHA)
             flicker_surf.fill((0, 0, 0, 80))
             self.game.screen.blit(flicker_surf, (0, 0))
@@ -275,6 +300,12 @@ class Scene5_Horror:
         self.game.journal.add_objective('ending',
                                         'The Blooming',
                                         'Experience the end of Day 1')
+
+    def _go_to_ending(self):
+        """Transition to the final ending scene."""
+        if self.game.scenes['ending'] is None:
+            self.game.scenes['ending'] = Scene5_Ending(self.game)
+        self.game.current_scene = self.game.scenes['ending']
 
 
 class Scene5_Ending:

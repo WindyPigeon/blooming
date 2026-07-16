@@ -1,7 +1,7 @@
 """Title screen with Start button."""
 
 import pygame
-from blooming.utils.utils import render_text, make_font
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio, load_image
 from blooming.utils import COLORS
 
 
@@ -15,6 +15,7 @@ class TitleScreen:
         self.hovered = False
         self.start_rect = pygame.Rect(412, 384, 200, 60)
         self.rects = []
+        self.bg_img = load_image('backgrounds/greenhouse-exterior.png')
         self._build_rects()
 
     def _build_rects(self):
@@ -24,7 +25,15 @@ class TitleScreen:
 
     def draw(self):
         """Draw the title screen."""
-        self.screen.fill(COLORS['dark_fog'])
+        if self.bg_img:
+            bg_scaled, bx, by = scale_image_keep_ratio(self.bg_img, 1024, 768)
+            self.screen.blit(bg_scaled, (bx, by))
+        else:
+            self.screen.fill(COLORS['dark_fog'])
+
+        overlay = pygame.Surface((1024, 768), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 100))
+        self.screen.blit(overlay, (0, 0))
 
         # Title
         title_surf = render_text(self.font, "THE BLOOMING",

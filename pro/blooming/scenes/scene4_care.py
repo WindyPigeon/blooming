@@ -7,7 +7,7 @@ Player waters X-17 with correct 500ml amount.
 
 import math
 import pygame
-from blooming.utils.utils import render_text, make_font, load_image
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
 from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
 
@@ -23,7 +23,7 @@ class Scene4_Care:
 
         # Hotspot rects
         self.x17_rect = pygame.Rect(450, 250, 120, 120)
-        self.mara_rect = pygame.Rect(50, 300, 80, 180)
+        self.mara_rect = pygame.Rect(162, 30, 700, 708)
         self.intercom_rect = pygame.Rect(900, 300, 100, 120)
 
         # State
@@ -36,8 +36,12 @@ class Scene4_Care:
         self.entered = False
 
         # Images
-        self.interior_img = load_image('greenhouse/greenhouse-interior.png')
-        self.flower_img = load_image('flower/flower.png')
+        self.interior_img = load_image('backgrounds/greenhouse-interior.png')
+        self.flower_img = load_image('props/flower.png')
+        self.mara_img = load_image('char/mara-left.png')
+        self.specimen_table_img = load_image('props/specimen-table.png')
+        self.intercom_img = load_image('props/intercom.png')
+        self.watering_can_img = load_image('props/watering-can.png')
 
         # Particles
         self.particles = ParticleSystem()
@@ -56,8 +60,8 @@ class Scene4_Care:
 
         # Background
         if self.interior_img:
-            screen.blit(pygame.transform.scale(self.interior_img,
-                                               (1024, 768)), (0, 0))
+            bg_scaled, bx, by = scale_image_keep_ratio(self.interior_img, 1024, 768)
+            screen.blit(bg_scaled, (bx, by))
         else:
             screen.fill((30, 60, 30))
             for x in range(0, 1024, 100):
@@ -72,14 +76,19 @@ class Scene4_Care:
 
         # Central specimen table
         table_rect = pygame.Rect(400, 370, 220, 130)
-        pygame.draw.rect(screen, (100, 80, 60), table_rect)
-        pygame.draw.rect(screen, (130, 110, 80),
-                         pygame.Rect(405, 375, 210, 120))
+        if self.specimen_table_img:
+            table_scaled, tx, ty = scale_image_keep_ratio(
+                self.specimen_table_img, table_rect.width, table_rect.height)
+            screen.blit(table_scaled, (table_rect.x + tx, table_rect.y + ty))
+        else:
+            pygame.draw.rect(screen, (100, 80, 60), table_rect)
+            pygame.draw.rect(screen, (130, 110, 80),
+                             pygame.Rect(405, 375, 210, 120))
 
         # X-17
         if self.flower_img:
-            screen.blit(pygame.transform.scale(self.flower_img, (120, 120)),
-                        (460, 260))
+            flower_scaled, fx, fy = scale_image_keep_ratio(self.flower_img, 120, 120)
+            screen.blit(flower_scaled, (460 + fx, 260 + fy))
         else:
             pygame.draw.rect(screen, COLORS['pink'], (460, 260, 120, 120))
 
@@ -96,21 +105,32 @@ class Scene4_Care:
         screen.blit(label_surf, (465, 380))
 
         # Intercom
-        pygame.draw.rect(screen, COLORS['gray'], self.intercom_rect)
-        pygame.draw.rect(screen, COLORS['white'], self.intercom_rect, 1)
-        intercom_lbl = render_text(make_font(12), "INTERCOM",
-                                   COLORS['dark_gray'])
-        screen.blit(intercom_lbl, (910, 350))
+        if self.intercom_img:
+            intercom_scaled, ix, iy = scale_image_keep_ratio(
+                self.intercom_img, self.intercom_rect.width, self.intercom_rect.height)
+            screen.blit(intercom_scaled, (self.intercom_rect.x + ix, self.intercom_rect.y + iy))
+        else:
+            pygame.draw.rect(screen, COLORS['gray'], self.intercom_rect)
+            pygame.draw.rect(screen, COLORS['white'], self.intercom_rect, 1)
+            intercom_lbl = render_text(make_font(12), "INTERCOM",
+                                       COLORS['dark_gray'])
+            screen.blit(intercom_lbl, (910, 350))
 
         # Mara
-        if not self.mara_left:
+        if not self.mara_left and self.mara_img:
+            mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
+            screen.blit(mara_scaled, (162 + mfx, mfy))
+            mara_lbl = render_text(make_font(14), "Mara",
+                                    COLORS['white'])
+            screen.blit(mara_lbl, (262, 600))
+        elif not self.mara_left:
             mara_surf = pygame.Surface((80, 180), pygame.SRCALPHA)
             pygame.draw.circle(mara_surf, COLORS['blue'], (40, 60), 30)
             pygame.draw.rect(mara_surf, COLORS['blue'],
                              pygame.Rect(10, 80, 60, 100))
             screen.blit(mara_surf, (60, 300))
             mara_lbl = render_text(make_font(14), "Mara",
-                                   COLORS['white'])
+                                    COLORS['white'])
             screen.blit(mara_lbl, (70, 490))
 
         # Particles
@@ -133,13 +153,15 @@ class Scene4_Care:
             return
 
         self.elapsed_frames += 1
+        self._check_horror_transition()
 
         # Add ambient particles
         if len(self.particles.particles) < 10:
             self.particles.add_ambient(510, 300, 1)
 
         # Radio call trigger (after 5 seconds)
-        if self.x17_watered and not self.mara_paged and self.elapsed_frames > 300:
+        x17_was_watered = self.x17_watered or self.game.flags.get('x17_watered', False)
+        if x17_was_watered and not self.mara_paged and self.elapsed_frames > 300:
             self._radio_call()
 
         for event in events:
@@ -148,7 +170,8 @@ class Scene4_Care:
 
                 # X-17
                 if self.x17_rect.collidepoint(pos):
-                    if not self.x17_watered:
+                    x17_was_watered = self.x17_watered or self.game.flags.get('x17_watered', False)
+                    if not x17_was_watered:
                         self._water_x17()
                     elif not self.mara_left:
                         self.game.dialogue.show_dialogue(
@@ -298,5 +321,33 @@ class Scene4_Care:
         self.x17_glowing = True
         self.particles.add_pollen(510, 310, 20)
         self.game.journal.update_objective('obj_wait',
-                                           'Investigate the change in X-17',
-                                           'Click the glowing X-17')
+                                            'Investigate the change in X-17',
+                                            'Click the glowing X-17')
+        self.game.flags['first_supernatural_observed'] = True
+        self._schedule_horror_transition()
+
+    def _schedule_horror_transition(self):
+        """Schedule transition to Scene 5 horror after delay."""
+        if not hasattr(self, '_transition_timer'):
+            self._transition_timer = 0
+        self._transition_timer = 180  # 3 seconds at 60fps
+
+    def _check_horror_transition(self):
+        """Check if it's time to transition to Scene 5."""
+        if hasattr(self, '_transition_timer') and self._transition_timer > 0:
+            self._transition_timer -= 1
+            if self._transition_timer <= 0:
+                self._go_to_horror()
+
+    def _go_to_horror(self):
+        """Transition to Scene 5 horror sequence."""
+        from blooming.scenes.scene5_horror import Scene5_Horror
+        if self.game.scenes['horror'] is None:
+            self.game.scenes['horror'] = Scene5_Horror(self.game)
+        self.game.current_scene = self.game.scenes['horror']
+        self.game.current_scene.phase = 1
+        self.game.flags['entered_horror_scene'] = True
+        self.game.sanity.decrease_sanity(10)
+        self.game.journal.add_objective('obj_climax',
+                                         'Survive the supernatural event',
+                                         'Respond to the horror sequence')

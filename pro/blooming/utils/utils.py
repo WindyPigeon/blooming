@@ -13,6 +13,10 @@ _DEJA_VU = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 def load_image(path: str):
     """Load an image from the assets/images directory.
 
+    Uses PIL to load the image as RGBA, then converts to pygame Surface
+    via frombuffer. This avoids pygame.image.load() returning 24-bit
+    surfaces that convert_alpha() fails on in pygame 2.6.1 + Python 3.14.
+
     Args:
         path: Relative path within blooming/assets/images/
 
@@ -23,12 +27,15 @@ def load_image(path: str):
     if IMAGE_DIR is None:
         return None
     full = os.path.join(IMAGE_DIR, path)
-    if os.path.exists(full):
-        try:
-            return pygame.image.load(full).convert_alpha()
-        except Exception:
-            return None
-    return None
+    if not os.path.exists(full):
+        return None
+    try:
+        pil_img = Image.open(full).convert('RGBA')
+        data = pil_img.tobytes("raw", "RGBA")
+        surf = pygame.image.frombuffer(data, pil_img.size, "RGBA")
+        return surf.convert_alpha()
+    except Exception:
+        return None
 
 
 def make_font(size: int) -> ImageFont.FreeTypeFont:
@@ -71,6 +78,26 @@ def text_size(font, text: str) -> Tuple[int, int]:
     bbox = font.getbbox(text)
     x0, y0, x1, y1 = bbox
     return (x1 - x0, y1 - y0)
+
+
+def scale_image_keep_ratio(surface, max_w: int, max_h: int):
+    """Scale surface to fit within (max_w, max_h) while preserving aspect ratio.
+
+    Returns:
+        (scaled_surface, center_x, center_y) where (center_x, center_y)
+        is the position to blit for centering within the bounding box.
+    """
+    orig_w, orig_h = surface.get_size()
+    scale_x = max_w / orig_w
+    scale_y = max_h / orig_h
+    scale = min(scale_x, scale_y)
+    new_w = int(orig_w * scale)
+    new_h = int(orig_h * scale)
+    scaled = pygame.transform.smoothscale(surface, (new_w, new_h))
+    # Center offset within the max bounding box
+    cx = (max_w - new_w) // 2
+    cy = (max_h - new_h) // 2
+    return scaled, cx, cy
 
 
 def draw_rounded_rect(surface, color, rect, radius=8):

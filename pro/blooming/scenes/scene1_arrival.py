@@ -13,7 +13,7 @@ Visual novel style:
 """
 
 import pygame
-from blooming.utils.utils import render_text, make_font, load_image
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
 from blooming.utils import COLORS
 
 
@@ -35,7 +35,7 @@ class Scene1_Arrival:
         self.sign_rect = pygame.Rect(100, 100, 150, 80)
         self.intercom_rect = pygame.Rect(850, 300, 100, 100)
         self.door_rect = pygame.Rect(400, 250, 224, 318)
-        self.mara_rect = pygame.Rect(500, 300, 100, 200)
+        self.mara_rect = pygame.Rect(162, 30, 700, 708)
 
         # State machine
         self.phase = 'greeting'
@@ -45,7 +45,12 @@ class Scene1_Arrival:
         self.door_clicked_before_card = False
 
         # Images
-        self.exterior_img = load_image('greenhouse/greenhouse-exterior.png')
+        self.exterior_img = load_image('backgrounds/greenhouse-exterior.png')
+        self.mara_img = load_image('char/mara-vale.png')
+        self.door_img = load_image('props/security-door.png')
+        self.sign_img = load_image('props/facility-sign.png')
+        self.intercom_img = load_image('props/intercom.png')
+        self.access_card_img = load_image('props/access-card.png')
 
         # Mara position
         self.mara_x = 350
@@ -80,6 +85,17 @@ class Scene1_Arrival:
         self.dialogue_playing = False
         self.dialogue_line_idx = 0
         self.dialogue_lines = []
+
+        # Card handoff animation
+        self.card_overlay_active = False
+        self.card_overlay_alpha = 0
+        self.card_overlay_timer = 0
+        self.card_overlay_duration = 90  # frames (~1.5s) fade in
+        self.card_overlay_max_alpha = 230
+        self.card_showing = False
+        self.card_fade_out_timer = 0
+        self.card_fade_out_duration = 75  # frames (~1.25s) fade out
+        self.card_given_to_inventory = False
 
         # Card handoff lines from screenplay
         self.card_lines = [
@@ -137,8 +153,8 @@ class Scene1_Arrival:
 
         # Draw scene
         if self.exterior_img:
-            screen.blit(pygame.transform.scale(self.exterior_img,
-                                               (1024, 768)), (0, 0))
+            bg_scaled, bx, by = scale_image_keep_ratio(self.exterior_img, 1024, 768)
+            screen.blit(bg_scaled, (bx, by))
         else:
             screen.fill(COLORS['dark_fog'])
             for i in range(0, 1024, 200):
@@ -151,12 +167,17 @@ class Scene1_Arrival:
         pygame.draw.rect(screen, COLORS['dark_gray'], (0, 550, 1024, 218))
 
         # Door
-        door_color = (COLORS['red'] if self.door_locked
-                      else COLORS['green'])
-        pygame.draw.rect(screen, COLORS['dark_gray'], self.door_rect)
-        pygame.draw.rect(screen, door_color,
-                         pygame.Rect(420, 270, 184, 278))
-        pygame.draw.rect(screen, COLORS['gray'], self.door_rect, 3)
+        if self.door_img:
+            door_scaled, dx, dy = scale_image_keep_ratio(
+                self.door_img, self.door_rect.width, self.door_rect.height)
+            screen.blit(door_scaled, (self.door_rect.x + dx, self.door_rect.y + dy))
+        else:
+            door_color = (COLORS['red'] if self.door_locked
+                          else COLORS['green'])
+            pygame.draw.rect(screen, COLORS['dark_gray'], self.door_rect)
+            pygame.draw.rect(screen, door_color,
+                             pygame.Rect(420, 270, 184, 278))
+            pygame.draw.rect(screen, COLORS['gray'], self.door_rect, 3)
 
         # Door indicator
         ind_x, ind_y = 630, 300
@@ -169,34 +190,66 @@ class Scene1_Arrival:
         screen.blit(ind_surf, (ind_x - 25, ind_y + 20))
 
         # Sign
-        pygame.draw.rect(screen, COLORS['gray'], self.sign_rect)
-        pygame.draw.rect(screen, COLORS['white'], self.sign_rect, 1)
-        for i, t in enumerate(["BLACKWOOD", "BOTANICAL", "RESEARCH"]):
-            s = render_text(self.small_font, t, COLORS['white'])
-            screen.blit(s, (110, 115 + i * 28))
-        sub = render_text(self.small_font,
-                          "AUTHORIZED PERSONNEL ONLY", COLORS['gray'])
-        screen.blit(sub, (110, 220))
+        if self.sign_img:
+            sign_scaled, sx, sy = scale_image_keep_ratio(
+                self.sign_img, self.sign_rect.width, self.sign_rect.height)
+            screen.blit(sign_scaled, (self.sign_rect.x + sx, self.sign_rect.y + sy))
+        else:
+            pygame.draw.rect(screen, COLORS['gray'], self.sign_rect)
+            pygame.draw.rect(screen, COLORS['white'], self.sign_rect, 1)
+            for i, t in enumerate(["BLACKWOOD", "BOTANICAL", "RESEARCH"]):
+                s = render_text(self.small_font, t, COLORS['white'])
+                screen.blit(s, (110, 115 + i * 28))
+            sub = render_text(self.small_font,
+                              "AUTHORIZED PERSONNEL ONLY", COLORS['gray'])
+            screen.blit(sub, (110, 220))
 
         # Intercom
-        pygame.draw.rect(screen, COLORS['gray'], self.intercom_rect)
-        pygame.draw.rect(screen, COLORS['white'], self.intercom_rect, 1)
-        spk = render_text(self.small_font, "INTERCOM", COLORS['dark_gray'])
-        screen.blit(spk, (self.intercom_rect.x + 5,
-                          self.intercom_rect.y + 40))
+        if self.intercom_img:
+            intercom_scaled, ix, iy = scale_image_keep_ratio(
+                self.intercom_img, self.intercom_rect.width, self.intercom_rect.height)
+            screen.blit(intercom_scaled, (self.intercom_rect.x + ix, self.intercom_rect.y + iy))
+        else:
+            pygame.draw.rect(screen, COLORS['gray'], self.intercom_rect)
+            pygame.draw.rect(screen, COLORS['white'], self.intercom_rect, 1)
+            spk = render_text(self.small_font, "INTERCOM", COLORS['dark_gray'])
+            screen.blit(spk, (self.intercom_rect.x + 5,
+                              self.intercom_rect.y + 40))
 
         # Mara with fade alpha
         mx = int(self.mara_x)
-        mara_surf = pygame.Surface((100, 200), pygame.SRCALPHA)
-        pygame.draw.circle(mara_surf, COLORS['blue'], (50, 100), 40)
-        pygame.draw.circle(mara_surf, COLORS['white'], (50, 100), 40, 2)
-        # Apply character fade
-        if self.mara_alpha < 255:
-            mara_surf.set_alpha(self.mara_alpha)
-        screen.blit(pygame.transform.scale(mara_surf, (100, 200)),
-                    (mx, 300))
+        if self.mara_img:
+            mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
+            # Apply character fade
+            if self.mara_alpha < 255:
+                mara_scaled.set_alpha(self.mara_alpha)
+            screen.blit(mara_scaled, (mx, mfy))
+        else:
+            mara_surf = pygame.Surface((100, 200), pygame.SRCALPHA)
+            pygame.draw.circle(mara_surf, COLORS['blue'], (50, 100), 40)
+            pygame.draw.circle(mara_surf, COLORS['white'], (50, 100), 40, 2)
+            if self.mara_alpha < 255:
+                mara_surf.set_alpha(self.mara_alpha)
+            screen.blit(mara_surf, (mx, 300))
         mara_lbl = render_text(make_font(14), "Mara", COLORS['white'])
-        screen.blit(mara_lbl, (mx + 30, 450))
+        screen.blit(mara_lbl, (mx + 200, 600))
+
+        # Large centered card overlay (fade in/out handoff animation)
+        if self.card_overlay_active and self.access_card_img:
+            overlay_surf = pygame.Surface((1024, 768), pygame.SRCALPHA)
+            overlay_surf.fill((0, 0, 0, 100))
+            screen.blit(overlay_surf, (0, 0))
+
+            # Position card at center of screen
+            card_scaled, cx, cy = scale_image_keep_ratio(self.access_card_img, 300, 190)
+            card_scaled.set_alpha(self.card_overlay_alpha)
+            screen.blit(card_scaled, (362 + cx, 289 + cy))
+
+            label = render_text(make_font(20), "ACCESS CARD (LEVEL 1)",
+                                COLORS['white'])
+            screen.blit(label, (512 - 100, 230))
+
+
 
         # Hint (only after fade complete)
         if not self.fade_active and not self.mara_fade_active:
@@ -257,6 +310,30 @@ class Scene1_Arrival:
                 self.mara_animating = False
                 self.mara_x = self.mara_target_x
 
+        # Update card overlay animation
+        if self.card_overlay_active and self.card_showing:
+            self.card_overlay_timer += 1
+            progress = self.card_overlay_timer / self.card_overlay_duration
+            if progress <= 0.3:
+                self.card_overlay_alpha = int(self.card_overlay_max_alpha * (progress / 0.3))
+            else:
+                self.card_overlay_alpha = self.card_overlay_max_alpha
+            if self.card_overlay_timer >= self.card_overlay_duration:
+                self.card_showing = False
+                self.card_overlay_timer = 0
+        elif self.card_overlay_active:
+            self.card_fade_out_timer += 1
+            progress = self.card_fade_out_timer / self.card_fade_out_duration
+            self.card_overlay_alpha = int(self.card_overlay_max_alpha * (1 - progress))
+            if self.card_fade_out_timer >= self.card_fade_out_duration:
+                self.card_overlay_active = False
+                self.card_overlay_alpha = 0
+                self.card_fade_out_timer = 0
+                if not self.card_given_to_inventory:
+                    self.card_given_to_inventory = True
+                    self.game.inventory.add_item('access_card', 'Access Card (Level 1)',
+                                                 image_path='props/access-card.png')
+
         # Process clicks
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -270,6 +347,10 @@ class Scene1_Arrival:
 
                 # Dialogue playing: click to advance
                 if self.dialogue_playing:
+                    # If card is showing, player click to advance triggers fade-out
+                    if self.card_showing:
+                        self.card_showing = False
+                        self.card_fade_out_timer = 0
                     self._advance_dialogue()
                     return
 
@@ -297,16 +378,15 @@ class Scene1_Arrival:
                 text, speaker = self.dialogue_lines[self.dialogue_idx]
                 self.game.dialogue.show_dialogue(text, speaker)
             else:
+                # Card dialogue exhausted - start fade-out
                 self.dialogue_playing = False
                 self.dialogue_lines = []
                 self.game.dialogue.clear()
-                # Phase-specific end behavior
                 if self.phase == 'greeting':
                     self.phase = 'card_given'
                     self._start_card_handoff()
                 elif self.phase == 'card_given':
                     self.card_done = True
-                    self.game.inventory.add_item('access_card', 'Access Card (Level 1)')
         else:
             # Dialogue exhausted
             self.dialogue_playing = False
@@ -321,6 +401,10 @@ class Scene1_Arrival:
         self.mara_animating = True
         self.mara_x = 420
         self.mara_target_x = 500
+        self.card_overlay_active = True
+        self.card_overlay_alpha = 0
+        self.card_overlay_timer = 0
+        self.card_showing = True
         self._show_next_line()
 
     def _handle_player_control(self, pos):
@@ -411,7 +495,9 @@ class Scene2_Orientation:
         self.rules_done = False
 
         # Images
-        self.corridor_img = load_image('greenhouse/corridor.png')
+        self.corridor_img = load_image('backgrounds/corridor-exterior.png')
+        self.mara_img = load_image('char/mara-vale.png')
+        self.door_img = load_image('props/security-door.png')
 
         # Fade-in system: start black, fade to 0
         self.fade_alpha = 255
@@ -482,8 +568,8 @@ class Scene2_Orientation:
 
         # Background
         if self.corridor_img:
-            screen.blit(pygame.transform.scale(self.corridor_img,
-                                               (1024, 768)), (0, 0))
+            bg_scaled, bx, by = scale_image_keep_ratio(self.corridor_img, 1024, 768)
+            screen.blit(bg_scaled, (bx, by))
         else:
             screen.fill(COLORS['dark_gray'])
             pygame.draw.rect(screen, COLORS['dark_gray'],
@@ -515,15 +601,20 @@ class Scene2_Orientation:
 
         # Mara with fade alpha
         mx = int(self.mara_x)
-        mara_surf = pygame.Surface((100, 200), pygame.SRCALPHA)
-        pygame.draw.circle(mara_surf, COLORS['blue'], (50, 100), 40)
-        pygame.draw.circle(mara_surf, COLORS['white'], (50, 100), 40, 2)
-        if self.mara_alpha < 255:
-            mara_surf.set_alpha(self.mara_alpha)
-        screen.blit(pygame.transform.scale(mara_surf, (100, 200)),
-                    (mx, 300))
+        if self.mara_img:
+            mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
+            if self.mara_alpha < 255:
+                mara_scaled.set_alpha(self.mara_alpha)
+            screen.blit(mara_scaled, (mx, mfy))
+        else:
+            mara_surf = pygame.Surface((100, 200), pygame.SRCALPHA)
+            pygame.draw.circle(mara_surf, COLORS['blue'], (50, 100), 40)
+            pygame.draw.circle(mara_surf, COLORS['white'], (50, 100), 40, 2)
+            if self.mara_alpha < 255:
+                mara_surf.set_alpha(self.mara_alpha)
+            screen.blit(mara_surf, (mx, 300))
         mara_lbl = render_text(make_font(14), "Mara", COLORS['white'])
-        screen.blit(mara_lbl, (mx + 30, 450))
+        screen.blit(mara_lbl, (mx + 200, 600))
 
         # Greenhouse glow
         if gh_open:
