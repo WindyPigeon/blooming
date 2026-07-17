@@ -31,6 +31,7 @@ from blooming.scenes import (
     Scene5_Ending,
 )
 from blooming.scenes.chapter_select import ChapterSelect
+from blooming.scenes.pause_menu import PauseMenu
 from blooming.scenes.title_screen import TitleScreen
 
 SCREEN_WIDTH = 1024
@@ -56,8 +57,11 @@ class Game:
         # Game state
         self.flags = {}
         self.chapter_select = ChapterSelect(self.screen)
+        self.pause_menu = PauseMenu(self.screen)
         self.title_screen = TitleScreen(self.screen)
         self.show_title = True
+        self.show_chapter_select = False
+        self.show_pause = False
 
         # Initialize journal entries
         self.journal.add_entry('s1_card', 'Access Card',
@@ -83,6 +87,8 @@ class Game:
         self.current_scene = self.scenes['arrival']
         self.journal.unlock_entry('s1_card')
         self._font20 = make_font(20)
+        self.bgm_volume = 0.7
+        self.sfx_volume = 0.7
 
     def _ensure_horror_scene(self):
         """Create horror scene on first transition."""
@@ -119,9 +125,6 @@ class Game:
                 for event in events:
                     if event.type == pygame.QUIT:
                         self.running = False
-                    elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_ESCAPE:
-                            self.running = False
 
                 choice = self.chapter_select.update(events)
                 self.chapter_select.draw()
@@ -129,6 +132,9 @@ class Game:
 
                 if choice == 'quit':
                     self.running = False
+                elif choice == 'back':
+                    self.show_chapter_select = False
+                    self.show_title = True
                 elif choice:
                     self._start_chapter(choice)
                 continue
@@ -138,9 +144,46 @@ class Game:
                     self.running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        self.running = False
+                        if not self.show_pause:
+                            self.show_pause = True
+                        else:
+                            self.show_pause = False
                     elif event.key == pygame.K_j:
                         self.journal.active = not self.journal.active
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        pos = event.pos
+                        pause_rect = pygame.Rect(
+                            SCREEN_WIDTH - 160, 20, 140, 40)
+                        if pause_rect.collidepoint(pos):
+                            if not self.show_pause:
+                                self.show_pause = True
+                            else:
+                                self.show_pause = False
+
+            # Pause menu - draw game scene underneath first
+            if self.show_pause:
+                # Draw the game scene (paused state)
+                self.current_scene.draw(self.screen)
+                self.dialogue.draw()
+                self.inventory.draw(self.screen)
+                self.journal.draw(self.screen)
+                self.sanity.draw(self.screen)
+
+                choice = self.pause_menu.update(events)
+                self.pause_menu.draw()
+                pygame.display.flip()
+
+                if choice == 'continue':
+                    self.show_pause = False
+                elif choice == 'quit':
+                    self.show_pause = False
+                    self.show_title = True
+                continue
+
+            # Sync pause volumes to game
+            self.bgm_volume = self.pause_menu.bgm_volume
+            self.sfx_volume = self.pause_menu.sfx_volume
 
             # Update
             self.dialogue.update(events)
@@ -178,12 +221,28 @@ class Game:
             self.journal.draw(self.screen)
             self.sanity.draw(self.screen)
 
+            # Pause button (top-right)
+            pause_w, pause_h = 140, 40
+            pause_rect = pygame.Rect(SCREEN_WIDTH - pause_w - 20, 20,
+                                     pause_w, pause_h)
+            pause_hover = pause_rect.collidepoint(pygame.mouse.get_pos())
+            pause_color = COLORS['yellow'] if pause_hover else (60, 60, 80)
+            pygame.draw.rect(self.screen, pause_color, pause_rect,
+                             border_radius=6)
+            if pause_hover:
+                pygame.draw.rect(self.screen, COLORS['white'], pause_rect,
+                                 2, border_radius=6)
+            pause_text = render_text(make_font(18), "⏸ PAUSE",
+                                     COLORS['black'])
+            self.screen.blit(pause_text,
+                             (pause_rect.x + 30, pause_rect.y + 10))
+
             # Bottom hints
             hint1 = render_text(self._font20,
                                 "Click hotspots to interact",
                                 COLORS['white'])
             hint2 = render_text(self._font20,
-                                "ESC to quit, J for journal",
+                                "Press ESC or click PAUSE to pause | J for journal",
                                 COLORS['gray'])
             self.screen.blit(hint1, (20, SCREEN_HEIGHT - 30))
             self.screen.blit(hint2, (20, SCREEN_HEIGHT - 5))

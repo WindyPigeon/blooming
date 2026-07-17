@@ -42,6 +42,9 @@ class ChapterSelect:
         self.button_rects = []
         self._build_buttons()
 
+        # Back button rect
+        self.back_rect = pygame.Rect(20, 700, 120, 40)
+
     def _build_buttons(self):
         """Create button rects for each chapter."""
         self.button_rects = []
@@ -92,9 +95,24 @@ class ChapterSelect:
                                 (COLORS['gray']))
                 self.screen.blit(l, (rect.x + 15, rect.y + 40 + j * 18))
 
+        # Back button
+        self._draw_back_button()
+
+    def _draw_back_button(self):
+        """Draw a back button at bottom-left."""
+        is_hover = self.back_rect.collidepoint(pygame.mouse.get_pos())
+        color = COLORS['yellow'] if is_hover else COLORS['dark_gray']
+        pygame.draw.rect(self.screen, color, self.back_rect, border_radius=4)
+        if is_hover:
+            pygame.draw.rect(self.screen, COLORS['white'],
+                             self.back_rect, 2, border_radius=4)
+        lbl = render_text(make_font(16), "← Back", COLORS['black'])
+        self.screen.blit(lbl, (self.back_rect.x + 25,
+                               self.back_rect.y + 10))
+
         # Hint
         hint = render_text(make_font(20),
-                           "Click a chapter to start | ESC to quit",
+                           "Click a chapter to start | ESC for menu",
                            COLORS['white'])
         self.screen.blit(hint, (1024 // 2 - 200, 720))
 
@@ -109,11 +127,15 @@ class ChapterSelect:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     pos = event.pos
+                    # Back button
+                    if self.back_rect.collidepoint(pos):
+                        return 'back'
+                    # Chapter buttons
                     for i, rect in enumerate(self.button_rects):
                         if rect.collidepoint(pos):
                             self.selected = i
                             return self.chapters[i]['key']
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return 'quit'
+                    return 'back'
         return None
