@@ -428,7 +428,8 @@ class Chapter2_Greenhouse:
                                                      'Empty Watering Can')
                         self.game.dialogue.show_dialogue(
                             "Standard watering can.",
-                            "Elias")
+                            "Elias",
+                            auto_advance=True)
                     elif not self.watering_can_filled:
                         self._try_fill_water()
 
@@ -439,16 +440,17 @@ class Chapter2_Greenhouse:
                     elif self.watering_can_held and self.watering_can_filled:
                         self.game.dialogue.show_dialogue(
                             "Already filled with 500 ml.",
-                            "Elias")
+                            "Elias",
+                            auto_advance=True)
                     else:
-                        self.game.dialogue.show_dialogue("Filtered water system?", "Elias")
-                        self.game.dialogue.show_dialogue("Yes.", "Mara")
+                        self.game.dialogue.show_dialogue("Filtered water system?", "Elias", auto_advance=True)
+                        self.game.dialogue.show_dialogue("Yes.", "Mara", auto_advance=True)
                         self.game.dialogue.show_dialogue(
                             "Specimens in this section don't receive water "
-                            "directly from the main supply.", "Mara")
-                        self.game.dialogue.show_dialogue("Why?", "Elias")
-                        self.game.dialogue.show_dialogue("Because contamination ruins research.", "Mara")
-                        self.game.dialogue.show_dialogue("And careers.", "Mara")
+                            "directly from the main supply.", "Mara", auto_advance=True)
+                        self.game.dialogue.show_dialogue("Why?", "Elias", auto_advance=True)
+                        self.game.dialogue.show_dialogue("Because contamination ruins research.", "Mara", auto_advance=True)
+                        self.game.dialogue.show_dialogue("And careers.", "Mara", auto_advance=True)
 
                 # Clipboard
                 elif self.clipboard_rect.collidepoint(pos):
@@ -463,21 +465,24 @@ class Chapter2_Greenhouse:
                             "Daily care: 23-25°C, inspect for abnormalities, "
                             "500 ml filtered water, record reactions, "
                             "do not relocate.",
-                            "Elias")
+                            "Elias",
+                            auto_advance=True)
 
                 # Thermometer
                 elif self.thermometer_rect.collidepoint(pos):
                     self.game.dialogue.show_dialogue(
                         "Greenhouse thermometer: 24 degrees Celsius.\n"
                         "Within the required range.",
-                        "Elias")
+                        "Elias",
+                        auto_advance=True)
 
                 # Cabinet
                 elif self.cabinet_rect.collidepoint(pos):
                     self.game.dialogue.show_dialogue(
                         "Storage cabinet. Contains general supplies "
                         "and extra pots.",
-                        "Elias")
+                        "Elias",
+                        auto_advance=True)
 
                 # Journal
                 elif self.journal_rect.collidepoint(pos) and not self.journal_closed:
@@ -499,11 +504,13 @@ class Chapter2_Greenhouse:
                             self.game.dialogue.show_dialogue(
                                 "The watering can is empty.\nI need to fill it with 500 ml "
                                 "filtered water.",
-                                "Elias")
+                                "Elias",
+                                auto_advance=True)
                         elif not self.watering_can_held:
                             self.game.dialogue.show_dialogue(
                                 "I need to select the watering can first.",
-                                "Elias")
+                                "Elias",
+                                auto_advance=True)
 
     def _first_meet_x17(self):
         """First interaction with X-17 - dialogue and observation."""
@@ -616,21 +623,21 @@ class Chapter2_Greenhouse:
     def _inspect_petals(self):
         """Inspect X-17 petals."""
         self.observed_petals = True
-        self.game.dialogue.show_dialogue("Closed petals.", "Elias")
-        self.game.dialogue.show_dialogue("Pale coloration.", "Elias")
-        self.game.dialogue.show_dialogue("No visible physical damage.", "Elias")
-        self.game.dialogue.show_dialogue("Good.", "Mara")
-        self.game.dialogue.show_dialogue("Next.", "Mara")
+        self.game.dialogue.show_dialogue("Closed petals.", "Elias", auto_advance=True)
+        self.game.dialogue.show_dialogue("Pale coloration.", "Elias", auto_advance=True)
+        self.game.dialogue.show_dialogue("No visible physical damage.", "Elias", auto_advance=True)
+        self.game.dialogue.show_dialogue("Good.", "Mara", auto_advance=True)
+        self.game.dialogue.show_dialogue("Next.", "Mara", auto_advance=True)
 
     def _inspect_stem(self):
         """Inspect X-17 stem."""
         self.observed_stem = True
-        self.game.dialogue.show_dialogue("Stem is upright.", "Elias")
-        self.game.dialogue.show_dialogue("No visible lesions.", "Elias")
-        self.game.dialogue.show_dialogue("And?", "Mara")
-        self.game.dialogue.show_dialogue("Slight discoloration near the base.", "Elias")
-        self.game.dialogue.show_dialogue("Good.", "Mara")
-        self.game.dialogue.show_dialogue("Remember it.", "Mara")
+        self.game.dialogue.show_dialogue("Stem is upright.", "Elias", auto_advance=True)
+        self.game.dialogue.show_dialogue("No visible lesions.", "Elias", auto_advance=True)
+        self.game.dialogue.show_dialogue("And?", "Mara", auto_advance=True)
+        self.game.dialogue.show_dialogue("Slight discoloration near the base.", "Elias", auto_advance=True)
+        self.game.dialogue.show_dialogue("Good.", "Mara", auto_advance=True)
+        self.game.dialogue.show_dialogue("Remember it.", "Mara", auto_advance=True)
 
     def _inspect_soil(self):
         """Inspect X-17 soil - triggers watering choice."""
@@ -645,20 +652,26 @@ class Chapter2_Greenhouse:
     def _soil_choice(self, choice: str):
         """Handle soil inspection choice."""
         if choice == "Water it.":
-            self.game.dialogue.show_dialogue("Water it.", "Elias")
-            self.game.dialogue.show_dialogue("Exactly.", "Mara")
+            self.game.dialogue.show_dialogue("Water it.", "Elias", auto_advance=True)
+            self.game.dialogue.show_dialogue("Exactly.", "Mara", auto_advance=True)
             self.game.journal.complete_objective('obj_inspect_x17')
         elif choice == "Change the soil.":
+            self.game.dialogue.show_dialogue("Change the soil?", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("No.", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("Start with the obvious problem.", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("The soil is dry.", "Mara", auto_advance=True)
             self.game.dialogue.show_dialogue(
-                "Change the soil?\nNo.\nStart with the obvious problem.\nThe "
-                "soil is dry.",
+                "Water it.",
                 "Mara",
                 ["Water it."],
                 lambda c: self._soil_choice("Water it."))
         else:
+            self.game.dialogue.show_dialogue("What was the rule outside?", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("Don't move the specimens.", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("Good.", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("So don't.", "Mara", auto_advance=True)
             self.game.dialogue.show_dialogue(
-                "What was the rule outside?\nDon't move the specimens.\nGood. "
-                "So don't.",
+                "Water it.",
                 "Mara",
                 ["Water it."],
                 lambda c: self._soil_choice("Water it."))
@@ -675,11 +688,11 @@ class Chapter2_Greenhouse:
     def _try_fill_water(self):
         """Attempt to fill the watering can."""
         if not self.clipboard_read:
-            self.game.dialogue.show_dialogue("How much water?", "Elias")
-            self.game.dialogue.show_dialogue("Check the care sheet.", "Mara")
-            self.game.dialogue.show_dialogue("You could just tell me.", "Elias")
-            self.game.dialogue.show_dialogue("I could.", "Mara")
-            self.game.dialogue.show_dialogue("Check the care sheet.", "Mara")
+            self.game.dialogue.show_dialogue("How much water?", "Elias", auto_advance=True)
+            self.game.dialogue.show_dialogue("Check the care sheet.", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("You could just tell me.", "Elias", auto_advance=True)
+            self.game.dialogue.show_dialogue("I could.", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("Check the care sheet.", "Mara", auto_advance=True)
             return
 
         self.game.dialogue.show_dialogue(
@@ -699,16 +712,16 @@ class Chapter2_Greenhouse:
     def _water_quantity(self, quantity: str):
         """Handle water quantity selection."""
         if quantity == "250 ml":
-            self.game.dialogue.show_dialogue("Two hundred and fifty.", "Elias")
-            self.game.dialogue.show_dialogue("Read the care sheet again.", "Mara")
+            self.game.dialogue.show_dialogue("Two hundred and fifty.", "Elias", auto_advance=True)
+            self.game.dialogue.show_dialogue("Read the care sheet again.", "Mara", auto_advance=True)
             self.game.inventory.items['watering_can']['name'] = 'Empty Watering Can'
             self.watering_can_filled = False
         elif quantity == "500 ml":
             self.watering_can_filled = True
             self.game.inventory.items['watering_can']['name'] = 'Can (500 ml)'
             self.game.dialogue.show_dialogue(
-                "Five hundred milliliters.", "Elias")
-            self.game.dialogue.show_dialogue("Good.", "Mara")
+                "Five hundred milliliters.", "Elias", auto_advance=True)
+            self.game.dialogue.show_dialogue("Good.", "Mara", auto_advance=True)
             self.game.journal.update_objective('obj_water_x17',
                                                'Water X-17 with 500 ml',
                                                'Use watering can on X-17')
@@ -716,9 +729,9 @@ class Chapter2_Greenhouse:
                                             'Water X-17',
                                             'Apply 500 ml to the specimen')
         else:
-            self.game.dialogue.show_dialogue("Seven hundred and fifty.", "Elias")
-            self.game.dialogue.show_dialogue("You're caring for it, Elias.", "Mara")
-            self.game.dialogue.show_dialogue("Not drowning it.", "Mara")
+            self.game.dialogue.show_dialogue("Seven hundred and fifty.", "Elias", auto_advance=True)
+            self.game.dialogue.show_dialogue("You're caring for it, Elias.", "Mara", auto_advance=True)
+            self.game.dialogue.show_dialogue("Not drowning it.", "Mara", auto_advance=True)
             self.game.inventory.items['watering_can']['name'] = 'Empty Watering Can'
             self.watering_can_filled = False
 

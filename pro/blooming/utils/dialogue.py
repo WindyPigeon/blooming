@@ -16,6 +16,8 @@ class DialogueSystem:
         self.current_dialogue = None
         self.choices = []
         self.choice_callback = None
+        self.auto_advance = False
+        self.auto_advance_timer = 0.0
         self.typewriter_text = ""
         self.typewriter_index = 0
         self.typewriter_timer = 0
@@ -24,7 +26,7 @@ class DialogueSystem:
         self.box_rect = pygame.Rect(50, 500, 1024 - 100, 200)
 
     def show_dialogue(self, text: str, speaker: str = "Elias",
-                      choices=None, callback=None):
+                      choices=None, callback=None, auto_advance=False):
         """Display a dialogue box with optional choices."""
         self.current_dialogue = {
             'text': text,
@@ -38,6 +40,8 @@ class DialogueSystem:
         self.typewriter_active = False
         # Auto-advance after short delay for typewriter effect
         self.typewriter_delay = len(text) * self.typewriter_speed
+        self.auto_advance = auto_advance
+        self.auto_advance_timer = 0.0
 
     def _wrap_text(self, text: str, max_width: int) -> list:
         """Wrap text into lines that fit within max_width."""
@@ -74,6 +78,18 @@ class DialogueSystem:
                             self.choices = []
                             self.choice_callback = None
                             return
+
+        # Auto-clear dialogues that have no choices
+        if (self.auto_advance
+                and self.current_dialogue
+                and not self.choices):
+            self.auto_advance_timer += 0.016
+            if self.auto_advance_timer >= 1.0:
+                self.current_dialogue = None
+                self.typewriter_index = 0
+                self.typewriter_active = False
+                self.auto_advance = False
+                self.auto_advance_timer = 0.0
 
     def draw(self):
         """Draw the dialogue box."""
