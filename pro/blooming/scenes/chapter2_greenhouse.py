@@ -6,10 +6,16 @@ Includes the observation tutorial (inspect petals, stem, soil).
 """
 
 import math
+import random
 import pygame
 from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
 from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 
 class Chapter2_Greenhouse:
@@ -87,6 +93,84 @@ class Chapter2_Greenhouse:
         # Care sheet display
         self.showing_care_sheet = False
 
+        # Screen flicker effect (uses the shared vfx/screen-flicker.png)
+        self.flicker_img = load_image('vfx/screen-flicker.png')
+        self.flicker_active = False
+        self.flicker_next_at = 0
+        self.flicker_end_at = 0
+
+        # Moving shadow shapes drifting across the greenhouse glass/floor
+        self.shadow_time = 0.0
+        self.shadows = [
+            {'x': -160, 'y': 90, 'w': 130, 'h': 340, 'speed': 14, 'alpha': 40},
+            {'x': 1180, 'y': 40, 'w': 90, 'h': 260, 'speed': -10, 'alpha': 30},
+            {'x': 500, 'y': 60, 'w': 160, 'h': 200, 'speed': 6, 'alpha': 22},
+        ]
+
+        # Whisper that slowly grows louder once Elias is left alone
+        self.whisper_sound = None
+        self.whisper_channel = None
+        self.whisper_started = False
+        self.whisper_start_ticks = 0
+        self.whisper_max_volume = 0.55
+        self.whisper_fade_seconds = 25.0
+        self._init_whisper_sound()
+
+    def _init_whisper_sound(self):
+        """Procedurally generate a soft, breathy whisper loop.
+
+        The project ships no audio assets, so the whisper is synthesised
+        from filtered noise rather than loaded from a file. Any failure
+        (no audio device, no numpy, mixer unavailable) is swallowed so the
+        scene works identically with sound disabled.
+        """
+        if np is None:
+            return
+        try:
+            if pygame.mixer.get_init() is None:
+                pygame.mixer.init()
+            sample_rate = 22050
+            duration = 4.0
+            t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
+            rng = np.random.default_rng(17)
+            noise = rng.normal(0, 1, t.shape[0])
+            # Crude low-pass (moving average) so it reads as "breath" not hiss
+            kernel = np.ones(48) / 48.0
+            filtered = np.convolve(noise, kernel, mode='same')
+            # Slow breathing-rhythm amplitude envelope
+            envelope = 0.4 + 0.6 * (0.5 + 0.5 * np.sin(2 * math.pi * 0.25 * t))
+            waveform = filtered * envelope
+            peak = np.max(np.abs(waveform))
+            if peak > 0:
+                waveform = waveform / peak
+            pcm = (waveform * 32767 * 0.8).astype(np.int16)
+            stereo = np.ascontiguousarray(np.column_stack((pcm, pcm)))
+            self.whisper_sound = pygame.sndarray.make_sound(stereo)
+        except Exception:
+            self.whisper_sound = None
+
+    def _start_whisper(self):
+        """Begin the whisper loop, silent at first, growing louder over time."""
+        if self.whisper_started or self.whisper_sound is None:
+            return
+        self.whisper_started = True
+        try:
+            self.whisper_channel = self.whisper_sound.play(loops=-1)
+            if self.whisper_channel:
+                self.whisper_channel.set_volume(0.0)
+            self.whisper_start_ticks = pygame.time.get_ticks()
+        except Exception:
+            self.whisper_channel = None
+
+    def _stop_whisper(self, fade_ms=800):
+        """Fade the whisper out (used when leaving the scene)."""
+        if self.whisper_channel:
+            try:
+                self.whisper_channel.fadeout(fade_ms)
+            except Exception:
+                pass
+            self.whisper_channel = None
+
     @property
     def active(self):
         return self.phase != 'entered'
@@ -116,6 +200,9 @@ class Chapter2_Greenhouse:
             pygame.draw.rect(screen, (20, 80, 20), (i, 350, 60, 100))
             pygame.draw.rect(screen, (40, 120, 40),
                              (i + 10, 340, 40, 20))
+
+        # Moving shadows drifting across the glass and floor
+        self._draw_moving_shadows(screen)
 
         # Watering can
         if not self.watering_can_held:
@@ -265,6 +352,17 @@ class Chapter2_Greenhouse:
         self.particles.update(0.016)
         self.particles.draw(screen)
 
+        # Screen flicker (uses vfx/screen-flicker.png), on top of everything
+        if self.flicker_active:
+            if self.flicker_img:
+                flicker_scaled, ffx, ffy = scale_image_keep_ratio(
+                    self.flicker_img, 1024, 768)
+                screen.blit(flicker_scaled, (ffx, ffy))
+            else:
+                flicker_surf = pygame.Surface((1024, 768), pygame.SRCALPHA)
+                flicker_surf.fill((255, 255, 255, 35))
+                screen.blit(flicker_surf, (0, 0))
+
         # Objective hint after intro
         if self.intro_dialogue_done and self.phase == 'explore' and not self.game.flags.get('objective_hint_shown', False):
             obj_surf = render_text(make_font(28), "EXPLORE THE GREENHOUSE", COLORS['yellow'])
@@ -272,6 +370,15 @@ class Chapter2_Greenhouse:
             hint_surf = render_text(make_font(18), "Click on objects to interact", COLORS['white'])
             screen.blit(hint_surf, (1024 // 2 - hint_surf.get_width() // 2, 90))
             self.game.flags['objective_hint_shown'] = True
+
+    def _draw_moving_shadows(self, screen):
+        """Draw soft, slowly drifting shadow silhouettes across the scene."""
+        for shadow in self.shadows:
+            sway = math.sin(self.shadow_time * 0.5 + shadow['x'] * 0.01) * 10
+            shadow_surf = pygame.Surface((shadow['w'], shadow['h']), pygame.SRCALPHA)
+            pygame.draw.ellipse(shadow_surf, (0, 0, 0, shadow['alpha']),
+                                (0, 0, shadow['w'], shadow['h']))
+            screen.blit(shadow_surf, (shadow['x'] + sway, shadow['y']))
 
     def _draw_observation(self, screen):
         """Draw observation mode UI."""
@@ -381,6 +488,39 @@ class Chapter2_Greenhouse:
         if len(self.particles.particles) < 10:
             self.particles.add_ambient(510, 300, 1)
 
+        alone = self.game.flags.get('mara_left', False)
+
+        # Moving shadows drifting across the glass/floor - subtle while
+        # Mara is around, more pronounced once Elias is left alone
+        self.shadow_time += 0.016
+        for shadow in self.shadows:
+            shadow['x'] += shadow['speed'] * (1.6 if alone else 1.0) * 0.016 * 60
+            if shadow['speed'] > 0 and shadow['x'] > 1024 + shadow['w']:
+                shadow['x'] = -shadow['w']
+            elif shadow['speed'] < 0 and shadow['x'] < -shadow['w']:
+                shadow['x'] = 1024 + shadow['w']
+
+        # Screen flicker - starts only once Elias is alone in the greenhouse
+        if alone:
+            now = pygame.time.get_ticks()
+            if not self.flicker_active and now >= self.flicker_next_at:
+                self.flicker_active = True
+                self.flicker_end_at = now + random.randint(100, 240)
+            elif self.flicker_active and now >= self.flicker_end_at:
+                self.flicker_active = False
+                self.flicker_next_at = now + random.randint(2500, 6000)
+        else:
+            self.flicker_active = False
+
+        # Whisper slowly grows louder the longer Elias is alone
+        if self.whisper_started and self.whisper_channel:
+            elapsed = (pygame.time.get_ticks() - self.whisper_start_ticks) / 1000.0
+            volume = min(1.0, elapsed / self.whisper_fade_seconds) * self.whisper_max_volume
+            try:
+                self.whisper_channel.set_volume(volume)
+            except Exception:
+                pass
+
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
@@ -425,7 +565,8 @@ class Chapter2_Greenhouse:
                     if not self.watering_can_held:
                         self.watering_can_held = True
                         self.game.inventory.add_item('watering_can',
-                                                     'Empty Watering Can')
+                                                     'Empty Watering Can',
+                                                     image_path='props/watering-can.png')
                         self.game.dialogue.show_dialogue(
                             "Standard watering can.",
                             "Elias",
@@ -613,10 +754,12 @@ class Chapter2_Greenhouse:
         self.game.journal.add_objective('obj_horror',
                                          'Inspect X-17',
                                          'Observe X-17 for supernatural changes')
+        self._start_whisper()
         self._start_queued_dialogue()
 
     def _transition_to_scene4(self):
         """Transition to Chapter 3 after Mara leaves."""
+        self._stop_whisper()
         from blooming.scenes.chapter3_care import Chapter3_Care
         self.game.current_scene = Chapter3_Care(self.game)
 
@@ -655,6 +798,12 @@ class Chapter2_Greenhouse:
             self.game.dialogue.show_dialogue("Water it.", "Elias", auto_advance=True)
             self.game.dialogue.show_dialogue("Exactly.", "Mara", auto_advance=True)
             self.game.journal.complete_objective('obj_inspect_x17')
+            # Close the observation overlay (it otherwise swallows every
+            # click permanently) and move into the watering phase so the
+            # player can actually fill the can and water X-17.
+            self.observation_active = False
+            self.phase = 'watering'
+            self._start_watering()
         elif choice == "Change the soil.":
             self.game.dialogue.show_dialogue("Change the soil?", "Mara", auto_advance=True)
             self.game.dialogue.show_dialogue("No.", "Mara", auto_advance=True)
@@ -701,14 +850,6 @@ class Chapter2_Greenhouse:
             ["250 ml", "500 ml", "750 ml"],
             lambda c: self._water_quantity(c))
 
-    def _trigger_scene4_transition(self):
-        """Transition to Chapter 3 after Mara leaves."""
-        from blooming.scenes.chapter3_care import Chapter3_Care
-        self.game.current_scene = Chapter3_Care(self.game)
-        self.game.journal.add_objective('obj_horror',
-                                         'Inspect X-17',
-                                         'Observe X-17 for supernatural changes')
-
     def _water_quantity(self, quantity: str):
         """Handle water quantity selection."""
         if quantity == "250 ml":
@@ -752,4 +893,3 @@ class Chapter2_Greenhouse:
                                            'Meet Mara at the specimen table',
                                            'Inspect X-17')
         self._start_queued_dialogue()
-
