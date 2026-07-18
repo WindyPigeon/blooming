@@ -13,7 +13,7 @@ from blooming.utils.particles import ParticleSystem
 from blooming.utils.screen_shake import ScreenShake
 
 
-class Scene5_Horror:
+class Chapter4_Horror:
     """Scene 5: Supernatural horror sequence and ending."""
 
     def __init__(self, game):
@@ -304,11 +304,11 @@ class Scene5_Horror:
     def _go_to_ending(self):
         """Transition to the final ending scene."""
         if self.game.scenes['ending'] is None:
-            self.game.scenes['ending'] = Scene5_Ending(self.game)
+            self.game.scenes['ending'] = Chapter4_Ending(self.game)
         self.game.current_scene = self.game.scenes['ending']
 
 
-class Scene5_Ending:
+class Chapter4_Ending:
     """Final ending scene."""
 
     def __init__(self, game):
@@ -355,6 +355,6 @@ class Scene5_Ending:
                     self.game.running = False
 
 
-# Constants needed for Scene5_Horror
+# Constants needed for Chapter4_Horror
 SCREEN_WIDTH = 1024
 SCREEN_HEIGHT = 768

@@ -1,4 +1,4 @@
-"""Scene 3 - Greenhouse Exploration (Member B)
+"""Chapter 3 - Greenhouse Exploration (Member B)
 
 Player explores the greenhouse, finds the watering can,
 reads care instructions, and meets Specimen X-17.
@@ -12,8 +12,8 @@ from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
 
 
-class Scene3_Greenhouse:
-    """Scene 3: Greenhouse exploration and X-17 introduction."""
+class Chapter2_Greenhouse:
+    """Chapter 2: Greenhouse exploration and X-17 introduction."""
 
     def __init__(self, game):
         self.game = game
@@ -502,9 +502,9 @@ class Scene3_Greenhouse:
         self._transition_to_scene4()
 
     def _transition_to_scene4(self):
-        """Transition to Scene 4 after Mara leaves."""
-        from blooming.scenes.scene4_care import Scene4_Care
-        self.game.current_scene = Scene4_Care(self.game)
+        """Transition to Chapter 3 after Mara leaves."""
+        from blooming.scenes.chapter3_care import Chapter3_Care
+        self.game.current_scene = Chapter3_Care(self.game)
 
     def _inspect_petals(self):
         """Inspect X-17 petals."""
@@ -581,9 +581,9 @@ class Scene3_Greenhouse:
             lambda c: self._water_quantity(c))
 
     def _trigger_scene4_transition(self):
-        """Transition to Scene 4 after Mara leaves."""
-        from blooming.scenes.scene4_care import Scene4_Care
-        self.game.current_scene = Scene4_Care(self.game)
+        """Transition to Chapter 3 after Mara leaves."""
+        from blooming.scenes.chapter3_care import Chapter3_Care
+        self.game.current_scene = Chapter3_Care(self.game)
         self.game.journal.add_objective('obj_horror',
                                          'Inspect X-17',
                                          'Observe X-17 for supernatural changes')

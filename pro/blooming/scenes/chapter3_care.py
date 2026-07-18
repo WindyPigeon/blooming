@@ -12,8 +12,8 @@ from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
 
 
-class Scene4_Care:
-    """Scene 4: Plant care and watering X-17."""
+class Chapter3_Care:
+    """Chapter 3: Plant care and watering X-17."""
 
     def __init__(self, game):
         self.game = game
@@ -340,10 +340,10 @@ class Scene4_Care:
                 self._go_to_horror()
 
     def _go_to_horror(self):
-        """Transition to Scene 5 horror sequence."""
-        from blooming.scenes.scene5_horror import Scene5_Horror
+        """Transition to Chapter 4 horror sequence."""
+        from blooming.scenes.chapter4_horror import Chapter4_Horror
         if self.game.scenes['horror'] is None:
-            self.game.scenes['horror'] = Scene5_Horror(self.game)
+            self.game.scenes['horror'] = Chapter4_Horror(self.game)
         self.game.current_scene = self.game.scenes['horror']
         self.game.current_scene.phase = 1
         self.game.flags['entered_horror_scene'] = True

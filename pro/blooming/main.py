@@ -23,12 +23,12 @@ from blooming.utils.inventory import Inventory
 from blooming.utils.journal import Journal
 from blooming.utils.sanity import SanitySystem
 from blooming.scenes import (
-    Scene1_Arrival,
-    Scene2_Orientation,
-    Scene3_Greenhouse,
-    Scene4_Care,
-    Scene5_Horror,
-    Scene5_Ending,
+    Chapter1_Arrival,
+    Chapter2_Orientation,
+    Chapter3_Greenhouse,
+    Chapter4_Care,
+    Chapter4_Horror,
+    Chapter4_Ending,
 )
 from blooming.scenes.chapter_select import ChapterSelect
 from blooming.scenes.pause_menu import PauseMenu
@@ -76,10 +76,10 @@ class Game:
 
         # Build scene chain
         self.scenes = {
-            'arrival': Scene1_Arrival(self),
-            'orientation': Scene2_Orientation(self),
-            'greenhouse': Scene3_Greenhouse(self),
-            'care': Scene4_Care(self),
+            'arrival': Chapter1_Arrival(self),
+            'orientation': Chapter2_Orientation(self),
+            'greenhouse': Chapter3_Greenhouse(self),
+            'care': Chapter4_Care(self),
             'horror': None,  # created lazily
             'ending': None,  # created lazily
         }
@@ -93,9 +93,9 @@ class Game:
     def _ensure_horror_scene(self):
         """Create horror scene on first transition."""
         if self.scenes['horror'] is None:
-            self.scenes['horror'] = Scene5_Horror(self)
+            self.scenes['horror'] = Chapter4_Horror(self)
         if self.scenes['ending'] is None:
-            self.scenes['ending'] = Scene5_Ending(self)
+            self.scenes['ending'] = Chapter4_Ending(self)
 
     def run(self):
         """Main game loop."""
@@ -209,7 +209,7 @@ class Game:
 
             # Sanity check
             if self.sanity.is_critical() and not isinstance(
-                    self.current_scene, (Scene5_Horror, Scene5_Ending)):
+                    self.current_scene, (Chapter4_Horror, Chapter4_Ending)):
                 self._ensure_horror_scene()
                 self.current_scene = self.scenes['horror']
                 self.current_scene.phase = 2
@@ -260,13 +260,13 @@ class Game:
 
         # Reset scene state for re-entry
         if chapter_key == 'arrival':
-            self.current_scene = Scene1_Arrival(self)
+            self.current_scene = Chapter1_Arrival(self)
         elif chapter_key == 'orientation':
-            self.current_scene = Scene2_Orientation(self)
+            self.current_scene = Chapter1_Orientation(self)
         elif chapter_key == 'greenhouse':
-            self.current_scene = Scene3_Greenhouse(self)
+            self.current_scene = Chapter2_Greenhouse(self)
         elif chapter_key == 'care':
-            self.current_scene = Scene4_Care(self)
+            self.current_scene = Chapter3_Care(self)
             self._ensure_horror_scene()
         elif chapter_key == 'horror':
             self._ensure_horror_scene()

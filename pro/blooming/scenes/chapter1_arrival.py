@@ -1,4 +1,4 @@
-"""Scene 1 - Arrival at Blackwood Research Facility (Member A)
+"""Chapter 1 - Arrival at Blackwood Research Facility (Member A)
 
 Player arrives at the facility, meets Dr. Mara Vale,
 receives an access card, and enters the building.
@@ -17,7 +17,7 @@ from blooming.utils.utils import render_text, make_font, load_image, scale_image
 from blooming.utils import COLORS
 
 
-class Scene1_Arrival:
+class Chapter1_Arrival:
     """Scene 1: Arrival at facility entrance.
 
     Visual novel style intro:
@@ -462,11 +462,11 @@ class Scene1_Arrival:
     def _enter_facility(self):
         """Transition to Scene 2. Matches screenplay SEQ 01 end."""
         self.phase = 'done'
-        self.game.current_scene = Scene2_Orientation(self.game)
+        self.game.current_scene = Chapter1_Orientation(self.game)
         self.game.sanity.decrease_sanity(5)
 
 
-class Scene2_Orientation:
+class Chapter1_Orientation:
     """Scene 2: Facility corridor orientation.
 
     Visual novel style:
@@ -779,5 +779,5 @@ class Scene2_Orientation:
         """Transition to Scene 3 (Greenhouse)."""
         self.phase = 'enter_greenhouse'
         self.game.journal.complete_objective('obj_greenhouse')
-        from blooming.scenes.scene3_greenhouse import Scene3_Greenhouse
-        self.game.current_scene = Scene3_Greenhouse(self.game)
+        from blooming.scenes.chapter2_greenhouse import Chapter2_Greenhouse
+        self.game.current_scene = Chapter2_Greenhouse(self.game)
