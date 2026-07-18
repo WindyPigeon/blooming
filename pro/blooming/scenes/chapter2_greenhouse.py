@@ -42,6 +42,11 @@ class Chapter2_Greenhouse:
         self.intro_idx = 0
         self.mara_arrived_table = False
 
+        # Mara fade-out state
+        self.mara_fading = False
+        self.mara_fade_timer = 0.0
+        self.mara_fade_duration = 2.0
+
         # State
         self.watering_can_held = False
         self.watering_can_filled = False
@@ -53,6 +58,12 @@ class Chapter2_Greenhouse:
         self.entered = False
         self.phase = 'greenhouse_intro'
         self.particles = ParticleSystem()
+
+        # Dialogue queue for non-choice dialogues
+        self.dialogue_queue = []
+        self.dialogue_idx = 0
+        self.dialogue_playing = False
+        self.pending_transition = False
 
         # Images
         self.interior_img = load_image('backgrounds/greenhouse-interior.png')
@@ -201,22 +212,46 @@ class Chapter2_Greenhouse:
                                  COLORS['white'])
         screen.blit(label_surf, (465, 380))
 
-        # Mara
-        if not self.mara_left and self.mara_img:
-            mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
-            screen.blit(mara_scaled, (162 + mfx, mfy))
-            mara_lbl = render_text(make_font(14), "Mara",
-                                    COLORS['white'])
-            screen.blit(mara_lbl, (262, 600))
-        elif not self.mara_left:
-            mara_surf = pygame.Surface((80, 180), pygame.SRCALPHA)
-            pygame.draw.circle(mara_surf, COLORS['blue'], (40, 60), 30)
-            pygame.draw.rect(mara_surf, COLORS['blue'],
-                             pygame.Rect(10, 80, 60, 100))
-            screen.blit(mara_surf, (60, 300))
-            mara_lbl = render_text(make_font(14), "Mara",
-                                    COLORS['white'])
-            screen.blit(mara_lbl, (70, 490))
+        # Mara (with fade-out)
+        if not self.mara_left:
+            if self.mara_fading:
+                alpha = int(255 * (1 - self.mara_fade_timer / self.mara_fade_duration))
+                alpha = max(0, alpha)
+                if alpha > 0 and self.mara_img:
+                    mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
+                    mara_alpha_surf = pygame.Surface(mara_scaled.get_size(), pygame.SRCALPHA)
+                    mara_alpha_surf.blit(mara_scaled, (0, 0))
+                    mara_alpha_surf.set_alpha(alpha)
+                    screen.blit(mara_alpha_surf, (162 + mfx, mfy))
+                    mara_lbl = render_text(make_font(14), "Mara",
+                                            COLORS['white'])
+                    screen.blit(mara_lbl, (262, 600))
+                elif alpha > 0:
+                    mara_surf = pygame.Surface((80, 180), pygame.SRCALPHA)
+                    mara_surf.set_alpha(alpha)
+                    pygame.draw.circle(mara_surf, COLORS['blue'], (40, 60), 30)
+                    pygame.draw.rect(mara_surf, COLORS['blue'],
+                                     pygame.Rect(10, 80, 60, 100))
+                    screen.blit(mara_surf, (162, 300))
+                    mara_lbl = render_text(make_font(14), "Mara",
+                                            COLORS['white'])
+                    screen.blit(mara_lbl, (262, 490))
+            else:
+                if self.mara_img:
+                    mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
+                    screen.blit(mara_scaled, (162 + mfx, mfy))
+                    mara_lbl = render_text(make_font(14), "Mara",
+                                            COLORS['white'])
+                    screen.blit(mara_lbl, (262, 600))
+                else:
+                    mara_surf = pygame.Surface((80, 180), pygame.SRCALPHA)
+                    pygame.draw.circle(mara_surf, COLORS['blue'], (40, 60), 30)
+                    pygame.draw.rect(mara_surf, COLORS['blue'],
+                                     pygame.Rect(10, 80, 60, 100))
+                    screen.blit(mara_surf, (162, 300))
+                    mara_lbl = render_text(make_font(14), "Mara",
+                                            COLORS['white'])
+                    screen.blit(mara_lbl, (262, 490))
 
         # Observation overlay
         if self.observation_active:
@@ -229,6 +264,14 @@ class Chapter2_Greenhouse:
         # Particles
         self.particles.update(0.016)
         self.particles.draw(screen)
+
+        # Objective hint after intro
+        if self.intro_dialogue_done and self.phase == 'explore' and not self.game.flags.get('objective_hint_shown', False):
+            obj_surf = render_text(make_font(28), "EXPLORE THE GREENHOUSE", COLORS['yellow'])
+            screen.blit(obj_surf, (1024 // 2 - obj_surf.get_width() // 2, 50))
+            hint_surf = render_text(make_font(18), "Click on objects to interact", COLORS['white'])
+            screen.blit(hint_surf, (1024 // 2 - hint_surf.get_width() // 2, 90))
+            self.game.flags['objective_hint_shown'] = True
 
     def _draw_observation(self, screen):
         """Draw observation mode UI."""
@@ -281,6 +324,33 @@ class Chapter2_Greenhouse:
                                  COLORS['gray'])
         screen.blit(close_hint, (rect.x + 20, rect.y + rect.height - 40))
 
+    def _advance_dialogue(self):
+        """Advance to the next queued dialogue line."""
+        if self.dialogue_idx < len(self.dialogue_queue):
+            text, speaker = self.dialogue_queue[self.dialogue_idx]
+            self.game.dialogue.clear()
+            self.game.dialogue.show_dialogue(text, speaker)
+            self.dialogue_idx += 1
+        else:
+            self.dialogue_playing = False
+            self.game.dialogue.clear()
+            if self.pending_transition:
+                self.pending_transition = False
+                self._transition_to_scene4()
+
+    def _queue_dialogue(self, text, speaker):
+        """Queue a dialogue line for sequential display."""
+        self.dialogue_queue.append((text, speaker))
+
+    def _start_queued_dialogue(self):
+        """Start showing queued dialogues."""
+        if not self.dialogue_playing and self.dialogue_queue:
+            self.dialogue_playing = True
+            self.dialogue_idx = 0
+            text, speaker = self.dialogue_queue[0]
+            self.game.dialogue.clear()
+            self.game.dialogue.show_dialogue(text, speaker)
+
     def update(self, events: list):
         """Handle greenhouse interactions."""
         if self.phase == 'entered':
@@ -288,14 +358,24 @@ class Chapter2_Greenhouse:
 
         # Intro dialogue auto-play
         if self.phase == 'greenhouse_intro' and not self.intro_dialogue_done:
-            if not self.game.dialogue.current_dialogue:
-                if self.intro_idx < len(self.intro_lines):
-                    text, speaker = self.intro_lines[self.intro_idx]
-                    self.game.dialogue.show_dialogue(text, speaker)
-                    self.intro_idx += 1
-                else:
-                    self.intro_dialogue_done = True
-                    self.phase = 'explore'
+            if self.intro_idx >= len(self.intro_lines):
+                # All intro lines shown - clear dialogue and start fade
+                self.intro_dialogue_done = True
+                self.game.dialogue.clear()
+                self.mara_fading = True
+                self.mara_fade_timer = 0.0
+                self.phase = 'explore'
+            elif not self.game.dialogue.current_dialogue:
+                text, speaker = self.intro_lines[self.intro_idx]
+                self.game.dialogue.show_dialogue(text, speaker)
+                self.intro_idx += 1
+
+        # Update Mara fade-out timer
+        if self.mara_fading:
+            self.mara_fade_timer += 0.016
+            if self.mara_fade_timer >= self.mara_fade_duration:
+                self.mara_left = True
+                self.mara_fading = False
 
         # Add ambient particles
         if len(self.particles.particles) < 10:
@@ -304,6 +384,26 @@ class Chapter2_Greenhouse:
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
+
+                # Click to advance intro dialogue (before hotspot checks)
+                if self.phase == 'greenhouse_intro' and not self.intro_dialogue_done:
+                    if self.game.dialogue.current_dialogue:
+                        if self.intro_idx < len(self.intro_lines):
+                            text, speaker = self.intro_lines[self.intro_idx]
+                            self.game.dialogue.clear()
+                            self.game.dialogue.show_dialogue(text, speaker)
+                            self.intro_idx += 1
+                        else:
+                            self.intro_dialogue_done = True
+                            self.mara_fading = True
+                            self.mara_fade_timer = 0.0
+                            self.phase = 'explore'
+                        continue
+
+                # Click to advance queued dialogue (explore phase)
+                if self.dialogue_playing and self.game.dialogue.current_dialogue:
+                    self._advance_dialogue()
+                    continue
 
                 # Close care sheet
                 if self.showing_care_sheet:
@@ -341,10 +441,14 @@ class Chapter2_Greenhouse:
                             "Already filled with 500 ml.",
                             "Elias")
                     else:
+                        self.game.dialogue.show_dialogue("Filtered water system?", "Elias")
+                        self.game.dialogue.show_dialogue("Yes.", "Mara")
                         self.game.dialogue.show_dialogue(
-                            "Filtered water system.\nSpecimens here don't "
-                            "receive water directly from the main supply.",
-                            "Elias")
+                            "Specimens in this section don't receive water "
+                            "directly from the main supply.", "Mara")
+                        self.game.dialogue.show_dialogue("Why?", "Elias")
+                        self.game.dialogue.show_dialogue("Because contamination ruins research.", "Mara")
+                        self.game.dialogue.show_dialogue("And careers.", "Mara")
 
                 # Clipboard
                 elif self.clipboard_rect.collidepoint(pos):
@@ -401,35 +505,33 @@ class Chapter2_Greenhouse:
                                 "I need to select the watering can first.",
                                 "Elias")
 
-                # Mara
-                elif self.mara_rect.collidepoint(pos):
-                    if not self.mara_left:
-                        self.game.dialogue.show_dialogue(
-                            "Go ahead.\nLook around.\nIf you're going to work "
-                            "here, learn where everything is.",
-                            "Mara")
-
     def _first_meet_x17(self):
         """First interaction with X-17 - dialogue and observation."""
         self.x17_interacted = True
         self.observation_active = True
-        self.game.dialogue.show_dialogue(
-            "This is why you're here.\nThat's it?\nDisappointed?\nA little.\n"
-            "Specimen X-17.\nRecovered three weeks ago from an undocumented "
-            "forest region.",
-            "Mara")
-        self.game.dialogue.show_dialogue(
-            "Species?\nUnknown.\nGenus?\nUnknown.\nFamily?\nIf we knew that, "
-            "Elias, we wouldn't need you.",
-            "Mara")
-
-        self.game.dialogue.show_dialogue(
-            "Before you do anything...\nInspect it.\nWhat am I looking for?\n"
-            "You tell me.",
-            "Mara")
+        self.dialogue_queue = []
+        self._queue_dialogue("This is why you're here.", "Mara")
+        self._queue_dialogue("That's it?", "Elias")
+        self._queue_dialogue("Disappointed?", "Mara")
+        self._queue_dialogue("A little.", "Elias")
+        self._queue_dialogue("Specimen X-17.", "Mara")
+        self._queue_dialogue(
+            "Recovered three weeks ago from an undocumented forest region.", "Mara")
+        self._queue_dialogue("Species?", "Elias")
+        self._queue_dialogue("Unknown.", "Mara")
+        self._queue_dialogue("Genus?", "Elias")
+        self._queue_dialogue("Unknown.", "Mara")
+        self._queue_dialogue("Family?", "Elias")
+        self._queue_dialogue(
+            "If we knew that, Elias, we wouldn't need you.", "Mara")
+        self._queue_dialogue("Before you do anything...", "Mara")
+        self._queue_dialogue("Inspect it.", "Mara")
+        self._queue_dialogue("What am I looking for?", "Elias")
+        self._queue_dialogue("You tell me.", "Mara")
         self.game.journal.add_objective('obj_inspect_x17',
                                         'Inspect X-17',
                                         'Examine petals, stem, and soil')
+        self._start_queued_dialogue()
 
     def _observe_x17(self):
         """Second X-17 interaction - observation mode."""
@@ -442,13 +544,15 @@ class Chapter2_Greenhouse:
 
     def _x17_after_water(self):
         """X-17 interaction after watering."""
-        self.game.dialogue.show_dialogue(
-            "Nothing happens.\nThat's it?\nWhat were you expecting?\n"
-            "I don't know.\nThat's research.",
-            "Elias")
+        self.dialogue_queue = []
+        self._queue_dialogue("That's it?", "Elias")
+        self._queue_dialogue("What were you expecting?", "Mara")
+        self._queue_dialogue("I don't know.", "Elias")
+        self._queue_dialogue("That's research.", "Mara")
         self.game.journal.add_objective('obj_wait',
                                          'Wait for reaction',
                                          'Observe X-17 for changes')
+        self._start_queued_dialogue()
 
     def _water_x17_from_scene3(self):
         """Water X-17 from Scene 3 and trigger transition to Scene 4."""
@@ -468,38 +572,41 @@ class Chapter2_Greenhouse:
 
     def _play_transition_dialogue(self):
         """Play radio call and Mara leaving dialogue, then transition to Scene 4."""
-        self.game.dialogue.show_dialogue(
-            "Elias carefully waters the plant.\nSlowly.\nThe watering "
-            "finishes.",
-            "Elias")
-        self.game.dialogue.show_dialogue(
-            "SFX: Radio static crackles through the greenhouse.",
-            "System")
-        self.game.dialogue.show_dialogue(
-            "Dr. Vale.\nReport to Lab Two immediately.\nI'm coming.",
-            "Radio")
-        self.game.dialogue.show_dialogue(
-            "Finish the observation record.\nThen leave.\nYou're leaving me "
-            "here?\nIt's a greenhouse, Elias.\nWhat could happen?",
-            "Mara")
-        self.game.dialogue.show_dialogue(
-            "Elias.\nIf you hear anything unusual--\nNothing.\nFinish your "
-            "work.",
-            "Mara")
-        self.game.dialogue.show_dialogue(
+        self.pending_transition = True
+        self.dialogue_queue = []
+        self._queue_dialogue("Slowly.", "Mara")
+        self._queue_dialogue("That's it?", "Elias")
+        self._queue_dialogue("What were you expecting?", "Mara")
+        self._queue_dialogue("I don't know.", "Elias")
+        self._queue_dialogue("That's research.", "Mara")
+        self._queue_dialogue("SFX: Radio static crackles through the greenhouse.", "System")
+        self._queue_dialogue("Dr. Vale.", "Radio")
+        self._queue_dialogue("Report to Lab Two immediately.", "Radio")
+        self._queue_dialogue("I'm coming.", "Mara")
+        self._queue_dialogue("Finish the observation record.", "Mara")
+        self._queue_dialogue("Then leave.", "Mara")
+        self._queue_dialogue("You're leaving me here?", "Elias")
+        self._queue_dialogue("It's a greenhouse, Elias.", "Mara")
+        self._queue_dialogue("What could happen?", "Mara")
+        self._queue_dialogue("Elias.", "Mara")
+        self._queue_dialogue("Yeah?", "Elias")
+        self._queue_dialogue("If you hear anything unusual--", "Mara")
+        self._queue_dialogue("What?", "Elias")
+        self._queue_dialogue("Nothing.", "Mara")
+        self._queue_dialogue("Finish your work.", "Mara")
+        self._queue_dialogue(
             "SFX: Greenhouse door closes.\nSFX: Electronic lock engages.\nThe "
-            "greenhouse ambience becomes quieter.",
-            "System")
+            "greenhouse ambience becomes quieter.", "System")
         self.game.sanity.decrease_sanity(5)
         self.game.journal.update_objective('obj_wait',
-                                            'Complete observation',
-                                            'Inspect X-17 again')
+                                             'Complete observation',
+                                             'Inspect X-17 again')
         self.game.flags['x17_watered'] = True
         self.game.flags['mara_left'] = True
         self.game.journal.add_objective('obj_horror',
                                          'Inspect X-17',
                                          'Observe X-17 for supernatural changes')
-        self._transition_to_scene4()
+        self._start_queued_dialogue()
 
     def _transition_to_scene4(self):
         """Transition to Chapter 3 after Mara leaves."""
@@ -509,23 +616,28 @@ class Chapter2_Greenhouse:
     def _inspect_petals(self):
         """Inspect X-17 petals."""
         self.observed_petals = True
-        self.game.dialogue.show_dialogue(
-            "Closed petals.\nPale coloration.\nNo visible physical damage.",
-            "Elias")
+        self.game.dialogue.show_dialogue("Closed petals.", "Elias")
+        self.game.dialogue.show_dialogue("Pale coloration.", "Elias")
+        self.game.dialogue.show_dialogue("No visible physical damage.", "Elias")
+        self.game.dialogue.show_dialogue("Good.", "Mara")
+        self.game.dialogue.show_dialogue("Next.", "Mara")
 
     def _inspect_stem(self):
         """Inspect X-17 stem."""
         self.observed_stem = True
-        self.game.dialogue.show_dialogue(
-            "Stem is upright.\nNo visible lesions.\nSlight discoloration "
-            "near the base.",
-            "Elias")
+        self.game.dialogue.show_dialogue("Stem is upright.", "Elias")
+        self.game.dialogue.show_dialogue("No visible lesions.", "Elias")
+        self.game.dialogue.show_dialogue("And?", "Mara")
+        self.game.dialogue.show_dialogue("Slight discoloration near the base.", "Elias")
+        self.game.dialogue.show_dialogue("Good.", "Mara")
+        self.game.dialogue.show_dialogue("Remember it.", "Mara")
 
     def _inspect_soil(self):
         """Inspect X-17 soil - triggers watering choice."""
         self.observed_soil = True
+        self.game.dialogue.show_dialogue("The soil is dry.", "Elias")
         self.game.dialogue.show_dialogue(
-            "The soil is dry.\nWhich means?",
+            "Which means?",
             "Mara",
             ["Water it.", "Change the soil.", "Move it into sunlight."],
             lambda c: self._soil_choice(c))
@@ -533,11 +645,8 @@ class Chapter2_Greenhouse:
     def _soil_choice(self, choice: str):
         """Handle soil inspection choice."""
         if choice == "Water it.":
-            self.game.dialogue.show_dialogue(
-                "Water it.\nExactly.",
-                "Elias",
-                ["Pick up watering can", "Read care sheet"],
-                lambda c: self._start_watering())
+            self.game.dialogue.show_dialogue("Water it.", "Elias")
+            self.game.dialogue.show_dialogue("Exactly.", "Mara")
             self.game.journal.complete_objective('obj_inspect_x17')
         elif choice == "Change the soil.":
             self.game.dialogue.show_dialogue(
@@ -566,12 +675,11 @@ class Chapter2_Greenhouse:
     def _try_fill_water(self):
         """Attempt to fill the watering can."""
         if not self.clipboard_read:
-            self.game.dialogue.show_dialogue(
-                "How much water?\nCheck the care sheet.",
-                "Mara")
-            self.game.dialogue.show_dialogue(
-                "You could just tell me.\nI could.\nCheck the care sheet.",
-                "Mara")
+            self.game.dialogue.show_dialogue("How much water?", "Elias")
+            self.game.dialogue.show_dialogue("Check the care sheet.", "Mara")
+            self.game.dialogue.show_dialogue("You could just tell me.", "Elias")
+            self.game.dialogue.show_dialogue("I could.", "Mara")
+            self.game.dialogue.show_dialogue("Check the care sheet.", "Mara")
             return
 
         self.game.dialogue.show_dialogue(
@@ -591,17 +699,16 @@ class Chapter2_Greenhouse:
     def _water_quantity(self, quantity: str):
         """Handle water quantity selection."""
         if quantity == "250 ml":
-            self.game.dialogue.show_dialogue(
-                "Two hundred and fifty.\nRead the care sheet again.",
-                "Elias")
+            self.game.dialogue.show_dialogue("Two hundred and fifty.", "Elias")
+            self.game.dialogue.show_dialogue("Read the care sheet again.", "Mara")
             self.game.inventory.items['watering_can']['name'] = 'Empty Watering Can'
             self.watering_can_filled = False
         elif quantity == "500 ml":
             self.watering_can_filled = True
             self.game.inventory.items['watering_can']['name'] = 'Can (500 ml)'
             self.game.dialogue.show_dialogue(
-                "Five hundred milliliters.\nGood.",
-                "Elias")
+                "Five hundred milliliters.", "Elias")
+            self.game.dialogue.show_dialogue("Good.", "Mara")
             self.game.journal.update_objective('obj_water_x17',
                                                'Water X-17 with 500 ml',
                                                'Use watering can on X-17')
@@ -609,26 +716,27 @@ class Chapter2_Greenhouse:
                                             'Water X-17',
                                             'Apply 500 ml to the specimen')
         else:
-            self.game.dialogue.show_dialogue(
-                "Seven hundred and fifty.\nYou're caring for it, Elias.\n"
-                "Not drowning it.",
-                "Mara")
+            self.game.dialogue.show_dialogue("Seven hundred and fifty.", "Elias")
+            self.game.dialogue.show_dialogue("You're caring for it, Elias.", "Mara")
+            self.game.dialogue.show_dialogue("Not drowning it.", "Mara")
             self.game.inventory.items['watering_can']['name'] = 'Empty Watering Can'
             self.watering_can_filled = False
 
     def _interact_journal(self):
         """Interact with the old research journal."""
         self.journal_closed = True
-        self.game.dialogue.show_dialogue(
-            "Whose journal is this?\nLeave that.\nWhy?\nOld research notes.\n"
-            "From X-17?\nI said leave it.",
-            "Elias")
-
+        self.dialogue_queue = []
+        self._queue_dialogue("Whose journal is this?", "Elias")
+        self._queue_dialogue("Leave that.", "Mara")
+        self._queue_dialogue("Why?", "Elias")
+        self._queue_dialogue("Old research notes.", "Mara")
+        self._queue_dialogue("From X-17?", "Elias")
+        self._queue_dialogue("I said leave it.", "Mara")
         # Mara approaches
-        self.game.dialogue.show_dialogue(
-            "Come here.\nThere's something you need to see.",
-            "Mara")
+        self._queue_dialogue("Come here.", "Mara")
+        self._queue_dialogue("There's something you need to see.", "Mara")
         self.game.journal.update_objective('obj_inspect_x17',
                                            'Meet Mara at the specimen table',
                                            'Inspect X-17')
+        self._start_queued_dialogue()
 
