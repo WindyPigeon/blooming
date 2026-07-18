@@ -24,9 +24,9 @@ from blooming.utils.journal import Journal
 from blooming.utils.sanity import SanitySystem
 from blooming.scenes import (
     Chapter1_Arrival,
-    Chapter2_Orientation,
-    Chapter3_Greenhouse,
-    Chapter4_Care,
+    Chapter1_Orientation,
+    Chapter2_Greenhouse,
+    Chapter3_Care,
     Chapter4_Horror,
     Chapter4_Ending,
 )
@@ -77,9 +77,9 @@ class Game:
         # Build scene chain
         self.scenes = {
             'arrival': Chapter1_Arrival(self),
-            'orientation': Chapter2_Orientation(self),
-            'greenhouse': Chapter3_Greenhouse(self),
-            'care': Chapter4_Care(self),
+            'orientation': Chapter1_Orientation(self),
+            'greenhouse': Chapter2_Greenhouse(self),
+            'care': Chapter3_Care(self),
             'horror': None,  # created lazily
             'ending': None,  # created lazily
         }

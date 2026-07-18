@@ -1,5 +1,7 @@
 """Screen shake effect for horror sequences."""
 
+import pygame
+
 
 class ScreenShake:
     """Produces temporary screen displacement for horror effects."""
@@ -32,6 +34,8 @@ class ScreenShake:
             else:
                 ramp = 1.0
             effective = int(self.intensity * ramp)
+            if effective == 0:
+                effective = 1
             self.offset_x = (pygame.time.get_ticks() % (effective * 2)) - effective
             self.offset_y = (pygame.time.get_ticks() % (effective * 2)) - effective
         else:
