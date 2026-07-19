@@ -29,7 +29,7 @@ class Chapter2_Greenhouse:
 
         # Hotspot rects
         self.watering_can_rect = pygame.Rect(100, 400, 80, 80)
-        self.sink_rect = pygame.Rect(250, 400, 80, 80)
+        self.sink_rect = pygame.Rect(550, 460, 80, 80)
         self.clipboard_rect = pygame.Rect(640, 420, 80, 80)
         self.thermometer_rect = pygame.Rect(900, 100, 60, 120)
         self.cabinet_rect = pygame.Rect(800, 400, 80, 80)
@@ -214,7 +214,7 @@ class Chapter2_Greenhouse:
         # Watering can
         if not self.watering_can_held:
             if self.watering_can_img:
-                scaled, sx, sy = scale_image_keep_ratio(self.watering_can_img, 80, 80)
+                scaled, sx, sy = scale_image_keep_ratio(self.watering_can_img, 300, 300)
                 screen.blit(scaled, (self.watering_can_rect.x + sx,
                                      self.watering_can_rect.y + sy))
             else:
@@ -222,14 +222,6 @@ class Chapter2_Greenhouse:
                                  self.watering_can_rect)
                 pygame.draw.rect(screen, COLORS['white'],
                                  self.watering_can_rect, 1)
-
-        # Sink
-        if self.sink_img:
-            scaled, sx, sy = scale_image_keep_ratio(self.sink_img, 80, 80)
-            screen.blit(scaled, (self.sink_rect.x + sx, self.sink_rect.y + sy))
-        else:
-            pygame.draw.rect(screen, COLORS['blue'], self.sink_rect)
-            pygame.draw.rect(screen, COLORS['white'], self.sink_rect, 1)
 
         # Clipboard
         if self.clipboard_img:
@@ -284,6 +276,14 @@ class Chapter2_Greenhouse:
             pygame.draw.rect(screen, (100, 80, 60), table_rect)
             pygame.draw.rect(screen, (130, 110, 80),
                              pygame.Rect(405, 375, 210, 120))
+
+        # Sink (foreground)
+        if self.sink_img:
+            scaled, sx, sy = scale_image_keep_ratio(self.sink_img, 400, 280)
+            screen.blit(scaled, (self.sink_rect.x + sx, self.sink_rect.y + sy))
+        else:
+            pygame.draw.rect(screen, COLORS['blue'], self.sink_rect)
+            pygame.draw.rect(screen, COLORS['white'], self.sink_rect, 1)
 
         # X-17 flower
         if self.flower_img:
