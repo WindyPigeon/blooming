@@ -208,12 +208,6 @@ class Chapter2_Greenhouse:
                             (0, 100, 1024, 300),
                             3.14, 0, 10)
 
-        # Rows of plants (background)
-        for i in range(0, 1024, 150):
-            pygame.draw.rect(screen, (20, 80, 20), (i, 350, 60, 100))
-            pygame.draw.rect(screen, (40, 120, 40),
-                             (i + 10, 340, 40, 20))
-
         # Moving shadows drifting across the glass and floor
         self._draw_moving_shadows(screen)
 
