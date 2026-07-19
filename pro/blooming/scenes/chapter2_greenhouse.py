@@ -1086,7 +1086,7 @@ class Chapter2_Greenhouse:
                     self._interact_journal()
 
                 # X-17
-                elif self.x17_rect.collidepoint(pos) and not self.dialogue_playing and not self.waiting_for_choice and not self.game.dialogue.current_dialogue:
+                elif self.x17_rect.collidepoint(pos) and not self.waiting_for_choice:
                     if self.phase == 'explore':
                         if not self.x17_interacted:
                             self._first_meet_x17()
@@ -1097,8 +1097,11 @@ class Chapter2_Greenhouse:
                         else:
                             self._x17_after_water()
                     elif self.phase == 'watering':
-                        if self.watering_can_held and self.watering_can_filled and '500' in self.game.inventory.items.get('watering_can', {}).get('name', ''):
+                        if (self.watering_can_held and self.watering_can_filled 
+                                and '500' in self.game.inventory.items.get('watering_can', {}).get('name', '')):
                             self._water_x17_from_scene3()
+                        elif self.first_impression is None:
+                            self._observe_x17()
                         elif not self.watering_can_filled:
                             self._observe_x17()
                         else:
@@ -1293,6 +1296,7 @@ class Chapter2_Greenhouse:
 
     def _water_x17_from_scene3(self):
         """Water X-17 from Scene 3 and trigger transition to Scene 4."""
+        self._water_x17_prompt_shown = False
         self.x17_watered = True
         self.watering_can_filled = False
         can = self.game.inventory.items.get('watering_can', {})
@@ -1337,15 +1341,16 @@ class Chapter2_Greenhouse:
         self.game.sanity.decrease_sanity(5)
         self.game.journal.update_objective('obj_wait',
                                              'Complete observation',
-                                             'Inspect X-17 again')
+                                         'Inspect X-17 again')
         self.game.flags['x17_watered'] = True
         self.game.flags['mara_left'] = True
         self.game.journal.add_objective('obj_horror',
-                                         'Inspect X-17',
-                                         'Observe X-17 for supernatural changes')
+                                          'Inspect X-17',
+                                          'Observe X-17 for supernatural changes')
         self.dialogue_playing = True
         self.dialogue_idx = 0
         self._start_queued_dialogue()
+        self.just_started_dialogue = True
         self._start_whisper()
         self._start_queued_dialogue()
 
