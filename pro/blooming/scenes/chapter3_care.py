@@ -184,7 +184,7 @@ class Chapter3_Care:
                 pos = event.pos
 
                 # X-17
-                if self.x17_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+                if self.x17_rect.collidepoint(pos) and not self.dialogue_playing:
                     x17_was_watered = self.x17_watered or self.game.flags.get('x17_watered', False)
                     if not x17_was_watered:
                         self._water_x17()
@@ -197,7 +197,7 @@ class Chapter3_Care:
                         self._x17_after_mara()
 
                 # Intercom
-                elif self.intercom_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+                elif self.intercom_rect.collidepoint(pos) and not self.dialogue_playing:
                     if self.mara_left:
                         self._use_intercom()
                     else:
@@ -206,7 +206,7 @@ class Chapter3_Care:
                             "Elias")
 
                 # Mara
-                elif self.mara_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+                elif self.mara_rect.collidepoint(pos) and not self.dialogue_playing:
                     if not self.mara_left:
                         self.game.dialogue.show_dialogue(
                             "Go ahead with the watering.\nI'll be back.",

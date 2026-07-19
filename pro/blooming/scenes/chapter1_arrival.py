@@ -573,13 +573,13 @@ class Chapter1_Arrival:
     def _handle_player_control(self, pos):
         """Handle player clicks during free exploration."""
         # Sign (optional)
-        if self.sign_rect.collidepoint(pos) and not self.sign_read and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+        if self.sign_rect.collidepoint(pos) and not self.sign_read and not self.dialogue_playing:
             self.sign_read = True
             self.game.dialogue.show_dialogue(
                 "Blackwood Research Facility.", "Elias")
 
         # Intercom (optional)
-        elif self.intercom_rect.collidepoint(pos) and not self.intercom_used and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+        elif self.intercom_rect.collidepoint(pos) and not self.intercom_used and not self.dialogue_playing:
             self.intercom_used = True
             self.intercom_static_active = True
             self.intercom_static_timer = 0
@@ -600,7 +600,7 @@ class Chapter1_Arrival:
                 self.intercom_static_active = False
 
         # Door
-        elif self.door_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+        elif self.door_rect.collidepoint(pos) and not self.dialogue_playing:
                     if self.phase == 'door_unlocked':
                         self._enter_facility()
                     elif self.card_done:
@@ -618,7 +618,7 @@ class Chapter1_Arrival:
 
         # Mara
         elif (self.mara_rect.collidepoint(pos) or
-              pygame.Rect(int(self.mara_x), 300, 100, 200).collidepoint(pos)) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+              pygame.Rect(int(self.mara_x), 300, 100, 200).collidepoint(pos)) and not self.dialogue_playing:
             if self.phase == 'card_given' and not self.card_done:
                 self.phase = 'card_given'
                 self._start_card_handoff()
@@ -912,7 +912,7 @@ class Chapter1_Orientation:
 
                 # Restricted Lab
                 if (self.restricted_rect.collidepoint(pos) and
-                        not self.restricted_done and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+                        not self.restricted_done and not self.dialogue_playing):
                     self.restricted_done = True
                     text, speaker = self.restricted_lines[self.restricted_idx]
                     self.game.dialogue.show_dialogue(text, speaker)
@@ -922,7 +922,7 @@ class Chapter1_Orientation:
 
                 # Staff Office
                 elif (self.office_rect.collidepoint(pos) and
-                        not self.office_clicked and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+                        not self.office_clicked and not self.dialogue_playing):
                     self.office_clicked = True
                     self.game.dialogue.show_dialogue(
                         "Staff Office. Mara's workspace.\nClosed for now.",
@@ -930,14 +930,14 @@ class Chapter1_Orientation:
 
                 # Storage
                 elif (self.storage_rect.collidepoint(pos) and
-                        not self.storage_clicked and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+                        not self.storage_clicked and not self.dialogue_playing):
                     self.storage_clicked = True
                     self.game.dialogue.show_dialogue(
                         "Storage room. Contains general supplies.",
                         "Elias")
 
                 # Greenhouse
-                elif self.greenhouse_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+                elif self.greenhouse_rect.collidepoint(pos) and not self.dialogue_playing:
                     if self.phase in ('rules_given', 'greenhouse_open'):
                         if not self.greenhouse_entrance_done:
                             self._greenhouse_entrance()
@@ -951,7 +951,7 @@ class Chapter1_Orientation:
                 # Mara
                 elif (self.mara_rect.collidepoint(pos) or
                       pygame.Rect(int(self.mara_x), 300, 100,
-                                  200).collidepoint(pos)) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+                                  200).collidepoint(pos)) and not self.dialogue_playing:
                     if self.phase not in ('rules_given', 'greenhouse_open'):
                         self._give_rules()
 
