@@ -100,6 +100,44 @@ def scale_image_keep_ratio(surface, max_w: int, max_h: int):
     return scaled, cx, cy
 
 
+def draw_hover_glow(surface, rect, time_ms, glow_color=(255, 255, 0, 140)):
+    """Draw a filled semi-transparent hover highlight with bright border around rect.
+
+    Args:
+        surface: pygame Surface to draw on
+        rect: pygame.Rect defining the area to glow
+        time_ms: current pygame time in milliseconds (for pulsing)
+        glow_color: (R, G, B, A) tuple for the fill
+    """
+    import math
+    pulse = int(0.5 + 0.5 * math.sin(time_ms * 0.005))
+    alpha = int(glow_color[3] * (0.5 + 0.5 * pulse))
+    x, y, w, h = rect.x, rect.y, rect.width, rect.height
+
+    pad = 6
+    full_w = w + pad * 2
+    full_h = h + pad * 2
+
+    glow_surf = pygame.Surface((full_w, full_h), pygame.SRCALPHA)
+
+    # Filled semi-transparent yellow shape
+    glow_surf.fill((*glow_color[:3], alpha))
+
+    # Bright border edge
+    edge_alpha = int(200 * (0.5 + 0.5 * pulse))
+    edge_thick = 2
+    pygame.draw.rect(glow_surf, (255, 255, 200, edge_alpha),
+                     pygame.Rect(0, 0, full_w, edge_thick), 0)
+    pygame.draw.rect(glow_surf, (255, 255, 200, edge_alpha),
+                     pygame.Rect(0, full_h - edge_thick, full_w, edge_thick), 0)
+    pygame.draw.rect(glow_surf, (255, 255, 200, edge_alpha),
+                     pygame.Rect(0, 0, edge_thick, full_h), 0)
+    pygame.draw.rect(glow_surf, (255, 255, 200, edge_alpha),
+                     pygame.Rect(full_w - edge_thick, 0, edge_thick, full_h), 0)
+
+    surface.blit(glow_surf, (x - pad, y - pad))
+
+
 def draw_rounded_rect(surface, color, rect, radius=8):
     """Draw a filled rectangle with rounded corners."""
     x, y, w, h = rect.x, rect.y, rect.width, rect.height

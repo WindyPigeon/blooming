@@ -8,7 +8,7 @@ Includes the observation tutorial (inspect petals, stem, soil).
 import math
 import random
 import pygame
-from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio, draw_hover_glow
 from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
 
@@ -212,59 +212,111 @@ class Chapter2_Greenhouse:
         self._draw_moving_shadows(screen)
 
         # Watering can
+        wc_drawn = None
+        wc_hover_rect = None
         if not self.watering_can_held:
             if self.watering_can_img:
                 scaled, sx, sy = scale_image_keep_ratio(self.watering_can_img, 300, 300)
                 screen.blit(scaled, (self.watering_can_rect.x + sx,
                                      self.watering_can_rect.y + sy))
+                wc_drawn = scaled
+                wc_hover_rect = pygame.Rect(self.watering_can_rect.x + sx,
+                                            self.watering_can_rect.y + sy,
+                                            scaled.get_width(), scaled.get_height())
             else:
                 pygame.draw.rect(screen, COLORS['orange'],
                                  self.watering_can_rect)
                 pygame.draw.rect(screen, COLORS['white'],
                                  self.watering_can_rect, 1)
+                wc_drawn = True
+                wc_hover_rect = self.watering_can_rect
+        if (wc_drawn and
+                wc_hover_rect.collidepoint(pygame.mouse.get_pos()) and
+                not self.waiting_for_choice and
+                not self.dialogue_playing and
+                not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, wc_hover_rect, pygame.time.get_ticks())
 
         # Clipboard
+        cb_drawn = None
+        cb_hover_rect = None
         if self.clipboard_img:
-            scaled, sx, sy = scale_image_keep_ratio(self.clipboard_img, 80, 80)
-            screen.blit(scaled, (self.clipboard_rect.x + sx,
-                                 self.clipboard_rect.y + sy))
+            cb_scaled, cb_sx, cb_sy = scale_image_keep_ratio(self.clipboard_img, 80, 80)
+            screen.blit(cb_scaled, (self.clipboard_rect.x + cb_sx, self.clipboard_rect.y + cb_sy))
+            cb_drawn = cb_scaled
+            cb_hover_rect = pygame.Rect(self.clipboard_rect.x + cb_sx,
+                                        self.clipboard_rect.y + cb_sy,
+                                        cb_scaled.get_width(), cb_scaled.get_height())
         else:
             pygame.draw.rect(screen, COLORS['yellow'], self.clipboard_rect)
-            pygame.draw.rect(screen, COLORS['white'],
-                             self.clipboard_rect, 1)
+            pygame.draw.rect(screen, COLORS['white'], self.clipboard_rect, 1)
+            cb_drawn = True
+            cb_hover_rect = self.clipboard_rect
+        if (cb_drawn and
+                cb_hover_rect.collidepoint(pygame.mouse.get_pos()) and not self.waiting_for_choice and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, cb_hover_rect, pygame.time.get_ticks())
 
         # Thermometer
+        th_drawn = None
+        th_hover_rect = None
         if self.thermometer_img:
-            scaled, sx, sy = scale_image_keep_ratio(self.thermometer_img, 60, 120)
-            screen.blit(scaled, (self.thermometer_rect.x + sx,
-                                 self.thermometer_rect.y + sy))
+            th_scaled, th_sx, th_sy = scale_image_keep_ratio(self.thermometer_img, 60, 120)
+            screen.blit(th_scaled, (self.thermometer_rect.x + th_sx,
+                                    self.thermometer_rect.y + th_sy))
+            th_drawn = th_scaled
+            th_hover_rect = pygame.Rect(self.thermometer_rect.x + th_sx,
+                                        self.thermometer_rect.y + th_sy,
+                                        th_scaled.get_width(), th_scaled.get_height())
         else:
             pygame.draw.rect(screen, COLORS['gray'], self.thermometer_rect)
-            pygame.draw.rect(screen, COLORS['white'],
-                             self.thermometer_rect, 1)
-            temp_surf = render_text(make_font(12), "24°C",
-                                    COLORS['red'])
+            pygame.draw.rect(screen, COLORS['white'], self.thermometer_rect, 1)
+            temp_surf = render_text(make_font(12), "24°C", COLORS['red'])
             screen.blit(temp_surf, (910, 160))
+            th_drawn = True
+            th_hover_rect = self.thermometer_rect
+        if (th_drawn and
+                th_hover_rect.collidepoint(pygame.mouse.get_pos()) and not self.waiting_for_choice and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, th_hover_rect, pygame.time.get_ticks())
 
         # Cabinet
+        cab_drawn = None
+        cab_hover_rect = None
         if self.cabinet_img:
-            scaled, sx, sy = scale_image_keep_ratio(self.cabinet_img, 80, 80)
-            screen.blit(scaled, (self.cabinet_rect.x + sx,
-                                 self.cabinet_rect.y + sy))
+            cab_scaled, cab_sx, cab_sy = scale_image_keep_ratio(self.cabinet_img, 80, 80)
+            screen.blit(cab_scaled, (self.cabinet_rect.x + cab_sx, self.cabinet_rect.y + cab_sy))
+            cab_drawn = cab_scaled
+            cab_hover_rect = pygame.Rect(self.cabinet_rect.x + cab_sx,
+                                         self.cabinet_rect.y + cab_sy,
+                                         cab_scaled.get_width(), cab_scaled.get_height())
         else:
             pygame.draw.rect(screen, COLORS['dark_gray'], self.cabinet_rect)
-            pygame.draw.rect(screen, COLORS['white'],
-                             self.cabinet_rect, 1)
+            pygame.draw.rect(screen, COLORS['white'], self.cabinet_rect, 1)
+            cab_drawn = True
+            cab_hover_rect = self.cabinet_rect
+        if (cab_drawn and
+                cab_hover_rect.collidepoint(pygame.mouse.get_pos()) and not self.waiting_for_choice and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, cab_hover_rect, pygame.time.get_ticks())
 
         # Journal
-        if not self.journal_closed and self.journal_img:
-            scaled, sx, sy = scale_image_keep_ratio(self.journal_img, 80, 80)
-            screen.blit(scaled, (self.journal_rect.x + sx,
-                                 self.journal_rect.y + sy))
-        elif not self.journal_closed:
-            pygame.draw.rect(screen, COLORS['brown'], self.journal_rect)
-            pygame.draw.rect(screen, COLORS['white'],
-                             self.journal_rect, 1)
+        jour_drawn = None
+        jour_hover_rect = None
+        if not self.journal_closed:
+            if self.journal_img:
+                jour_scaled, jour_sx, jour_sy = scale_image_keep_ratio(self.journal_img, 80, 80)
+                screen.blit(jour_scaled, (self.journal_rect.x + jour_sx,
+                                          self.journal_rect.y + jour_sy))
+                jour_drawn = jour_scaled
+                jour_hover_rect = pygame.Rect(self.journal_rect.x + jour_sx,
+                                              self.journal_rect.y + jour_sy,
+                                              jour_scaled.get_width(), jour_scaled.get_height())
+            else:
+                pygame.draw.rect(screen, COLORS['brown'], self.journal_rect)
+                pygame.draw.rect(screen, COLORS['white'], self.journal_rect, 1)
+                jour_drawn = True
+                jour_hover_rect = self.journal_rect
+        if (jour_drawn and
+                jour_hover_rect.collidepoint(pygame.mouse.get_pos()) and not self.waiting_for_choice and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, jour_hover_rect, pygame.time.get_ticks())
 
         # Central specimen table
         table_rect = pygame.Rect(400, 370, 220, 130)
@@ -278,19 +330,39 @@ class Chapter2_Greenhouse:
                              pygame.Rect(405, 375, 210, 120))
 
         # Sink (foreground)
+        sink_drawn = None
+        sink_hover_rect = None
         if self.sink_img:
-            scaled, sx, sy = scale_image_keep_ratio(self.sink_img, 400, 280)
-            screen.blit(scaled, (self.sink_rect.x + sx, self.sink_rect.y + sy))
+            sink_scaled, sx, sy = scale_image_keep_ratio(self.sink_img, 400, 280)
+            screen.blit(sink_scaled, (self.sink_rect.x + sx, self.sink_rect.y + sy))
+            sink_drawn = sink_scaled
+            sink_hover_rect = pygame.Rect(self.sink_rect.x + sx, self.sink_rect.y + sy,
+                                          sink_scaled.get_width(), sink_scaled.get_height())
         else:
             pygame.draw.rect(screen, COLORS['blue'], self.sink_rect)
             pygame.draw.rect(screen, COLORS['white'], self.sink_rect, 1)
+            sink_drawn = True
+            sink_hover_rect = self.sink_rect
+        if (sink_drawn and
+                sink_hover_rect.collidepoint(pygame.mouse.get_pos()) and not self.waiting_for_choice and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, sink_hover_rect, pygame.time.get_ticks())
 
         # X-17 flower
+        x17_drawn = None
+        x17_hover_rect = self.x17_rect
         if self.flower_img:
             flower_scaled, fx, fy = scale_image_keep_ratio(self.flower_img, 120, 120)
             screen.blit(flower_scaled, (460 + fx, 260 + fy))
+            x17_drawn = flower_scaled
+            x17_hover_rect = pygame.Rect(460 + fx, 260 + fy,
+                                         flower_scaled.get_width(), flower_scaled.get_height())
         else:
             pygame.draw.rect(screen, COLORS['pink'], (460, 260, 120, 120))
+            x17_drawn = True
+            x17_hover_rect = pygame.Rect(460, 260, 120, 120)
+        if (x17_drawn and
+                x17_hover_rect.collidepoint(pygame.mouse.get_pos()) and not self.waiting_for_choice and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, x17_hover_rect, pygame.time.get_ticks())
 
         # X-17 glow after watering
         if self.x17_watered:
@@ -837,14 +909,14 @@ class Chapter2_Greenhouse:
                         self._inspection_options_shown = False
 
                 # Watering can
-                if self.watering_can_rect.collidepoint(pos) and not self.waiting_for_choice:
+                if self.watering_can_rect.collidepoint(pos) and not self.waiting_for_choice and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if not self.watering_can_held:
                         self._pickup_watering_can()
                     elif not self.watering_can_filled:
                         self._watering_can_after_pickup()
 
                 # Sink
-                elif self.sink_rect.collidepoint(pos):
+                elif self.sink_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if self.watering_can_held and not self.watering_can_filled:
                         self._try_fill_water()
                     elif self.watering_can_held and self.watering_can_filled:
@@ -866,7 +938,7 @@ class Chapter2_Greenhouse:
                         self._start_queued_dialogue()
 
                 # Clipboard
-                elif self.clipboard_rect.collidepoint(pos):
+                elif self.clipboard_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if not self.clipboard_read:
                         self.showing_care_sheet = True
                         self.clipboard_read = True
@@ -881,25 +953,25 @@ class Chapter2_Greenhouse:
                             "Elias")
 
                 # Thermometer
-                elif self.thermometer_rect.collidepoint(pos):
+                elif self.thermometer_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     self.game.dialogue.show_dialogue(
                         "Greenhouse thermometer: 24 degrees Celsius.\n"
                         "Within the required range.",
                         "Elias")
 
                 # Cabinet
-                elif self.cabinet_rect.collidepoint(pos):
+                elif self.cabinet_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     self.game.dialogue.show_dialogue(
                         "Storage cabinet. Contains general supplies "
                         "and extra pots.",
                         "Elias")
 
                 # Journal
-                elif self.journal_rect.collidepoint(pos) and not self.journal_closed:
+                elif self.journal_rect.collidepoint(pos) and not self.journal_closed and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     self._interact_journal()
 
                 # X-17
-                elif self.x17_rect.collidepoint(pos):
+                elif self.x17_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if self.phase == 'explore':
                         if not self.x17_interacted:
                             self._first_meet_x17()

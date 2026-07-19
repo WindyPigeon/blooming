@@ -7,7 +7,7 @@ Player waters X-17 with correct 500ml amount.
 
 import math
 import pygame
-from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio, draw_hover_glow
 from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
 
@@ -83,14 +83,19 @@ class Chapter3_Care:
         else:
             pygame.draw.rect(screen, (100, 80, 60), table_rect)
             pygame.draw.rect(screen, (130, 110, 80),
-                             pygame.Rect(405, 375, 210, 120))
+                              pygame.Rect(405, 375, 210, 120))
 
         # X-17
+        x17_drawn = False
         if self.flower_img:
             flower_scaled, fx, fy = scale_image_keep_ratio(self.flower_img, 120, 120)
             screen.blit(flower_scaled, (460 + fx, 260 + fy))
+            x17_drawn = True
         else:
             pygame.draw.rect(screen, COLORS['pink'], (460, 260, 120, 120))
+            x17_drawn = True
+        if x17_drawn and self.x17_rect.collidepoint(pygame.mouse.get_pos()) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+            draw_hover_glow(screen, self.x17_rect, pygame.time.get_ticks())
 
         # Glow effect after watering
         if self.x17_watered:
@@ -105,18 +110,24 @@ class Chapter3_Care:
         screen.blit(label_surf, (465, 380))
 
         # Intercom
+        intercom_drawn = False
         if self.intercom_img:
             intercom_scaled, ix, iy = scale_image_keep_ratio(
                 self.intercom_img, self.intercom_rect.width, self.intercom_rect.height)
             screen.blit(intercom_scaled, (self.intercom_rect.x + ix, self.intercom_rect.y + iy))
+            intercom_drawn = True
         else:
             pygame.draw.rect(screen, COLORS['gray'], self.intercom_rect)
             pygame.draw.rect(screen, COLORS['white'], self.intercom_rect, 1)
             intercom_lbl = render_text(make_font(12), "INTERCOM",
                                        COLORS['dark_gray'])
             screen.blit(intercom_lbl, (910, 350))
+            intercom_drawn = True
+        if intercom_drawn and self.intercom_rect.collidepoint(pygame.mouse.get_pos()) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+            draw_hover_glow(screen, self.intercom_rect, pygame.time.get_ticks())
 
         # Mara
+        mara_drawn = not self.mara_left
         if not self.mara_left and self.mara_img:
             mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
             screen.blit(mara_scaled, (162 + mfx, mfy))
@@ -129,6 +140,10 @@ class Chapter3_Care:
             pygame.draw.rect(mara_surf, COLORS['blue'],
                              pygame.Rect(10, 80, 60, 100))
             screen.blit(mara_surf, (60, 300))
+        if mara_drawn and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+            mara_hover_rect = pygame.Rect(162, 30, 700, 708)
+            if mara_hover_rect.collidepoint(pygame.mouse.get_pos()):
+                draw_hover_glow(screen, mara_hover_rect, pygame.time.get_ticks())
             mara_lbl = render_text(make_font(14), "Mara",
                                     COLORS['white'])
             screen.blit(mara_lbl, (70, 490))
@@ -169,7 +184,7 @@ class Chapter3_Care:
                 pos = event.pos
 
                 # X-17
-                if self.x17_rect.collidepoint(pos):
+                if self.x17_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     x17_was_watered = self.x17_watered or self.game.flags.get('x17_watered', False)
                     if not x17_was_watered:
                         self._water_x17()
@@ -182,7 +197,7 @@ class Chapter3_Care:
                         self._x17_after_mara()
 
                 # Intercom
-                elif self.intercom_rect.collidepoint(pos):
+                elif self.intercom_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if self.mara_left:
                         self._use_intercom()
                     else:
@@ -191,7 +206,7 @@ class Chapter3_Care:
                             "Elias")
 
                 # Mara
-                elif self.mara_rect.collidepoint(pos):
+                elif self.mara_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if not self.mara_left:
                         self.game.dialogue.show_dialogue(
                             "Go ahead with the watering.\nI'll be back.",

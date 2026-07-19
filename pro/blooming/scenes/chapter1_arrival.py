@@ -15,7 +15,7 @@ Visual novel style:
 import pygame
 import math
 import random
-from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio, draw_hover_glow
 from blooming.utils import COLORS
 
 
@@ -265,10 +265,12 @@ class Chapter1_Arrival:
         pygame.draw.rect(screen, COLORS['dark_gray'], (0, 550, 1024, 218))
 
         # Door
+        door_drawn = False
         if self.door_img:
             door_scaled, dx, dy = scale_image_keep_ratio(
                 self.door_img, self.door_rect.width, self.door_rect.height)
             screen.blit(door_scaled, (self.door_rect.x + dx, self.door_rect.y + dy))
+            door_drawn = True
         else:
             door_color = (COLORS['red'] if self.door_locked
                           else COLORS['green'])
@@ -276,6 +278,7 @@ class Chapter1_Arrival:
             pygame.draw.rect(screen, door_color,
                              pygame.Rect(420, 270, 184, 278))
             pygame.draw.rect(screen, COLORS['gray'], self.door_rect, 3)
+            door_drawn = True
 
         # Door indicator with scan line
         ind_x, ind_y = 630, 300
@@ -301,11 +304,19 @@ class Chapter1_Arrival:
         ind_surf = render_text(make_font(12), ind_label, COLORS['white'])
         screen.blit(ind_surf, (ind_x - 25, ind_y + 20))
 
+        # Door hover glow
+        if (door_drawn and
+                self.door_rect.collidepoint(pygame.mouse.get_pos()) and
+                not self.dialogue_playing):
+            draw_hover_glow(screen, self.door_rect, pygame.time.get_ticks())
+
         # Sign
+        sign_drawn = False
         if self.sign_img:
             sign_scaled, sx, sy = scale_image_keep_ratio(
                 self.sign_img, self.sign_rect.width, self.sign_rect.height)
             screen.blit(sign_scaled, (self.sign_rect.x + sx, self.sign_rect.y + sy))
+            sign_drawn = True
         else:
             pygame.draw.rect(screen, COLORS['gray'], self.sign_rect)
             pygame.draw.rect(screen, COLORS['white'], self.sign_rect, 1)
@@ -315,18 +326,32 @@ class Chapter1_Arrival:
             sub = render_text(self.small_font,
                               "AUTHORIZED PERSONNEL ONLY", COLORS['gray'])
             screen.blit(sub, (110, 220))
+            sign_drawn = True
+        if (not self.sign_read and sign_drawn and
+                self.sign_rect.collidepoint(pygame.mouse.get_pos()) and
+                not self.dialogue_playing and
+                not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, self.sign_rect, pygame.time.get_ticks())
 
         # Intercom
+        intercom_drawn = False
         if self.intercom_img:
             intercom_scaled, ix, iy = scale_image_keep_ratio(
                 self.intercom_img, self.intercom_rect.width, self.intercom_rect.height)
             screen.blit(intercom_scaled, (self.intercom_rect.x + ix, self.intercom_rect.y + iy))
+            intercom_drawn = True
         else:
             pygame.draw.rect(screen, COLORS['gray'], self.intercom_rect)
             pygame.draw.rect(screen, COLORS['white'], self.intercom_rect, 1)
             spk = render_text(self.small_font, "INTERCOM", COLORS['dark_gray'])
             screen.blit(spk, (self.intercom_rect.x + 5,
                               self.intercom_rect.y + 40))
+            intercom_drawn = True
+        if (not self.intercom_used and intercom_drawn and
+                self.intercom_rect.collidepoint(pygame.mouse.get_pos()) and
+                not self.dialogue_playing and
+                not self.game.dialogue.current_dialogue):
+            draw_hover_glow(screen, self.intercom_rect, pygame.time.get_ticks())
 
         # Mara with breathing animation and blink
         mx = int(self.mara_x)
@@ -357,6 +382,14 @@ class Chapter1_Arrival:
         
         mara_lbl = render_text(make_font(14), "Mara", COLORS['white'])
         screen.blit(mara_lbl, (mx + 200, 600))
+
+        # Mara hover glow
+        mara_drawn = self.mara_rect.collidepoint(pygame.mouse.get_pos()) or (
+            hasattr(self, 'mara_x') and
+            pygame.Rect(int(self.mara_x), 300, 100, 200).collidepoint(pygame.mouse.get_pos()))
+        if mara_drawn and not self.mara_fade_active and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+            hover_rect = pygame.Rect(int(self.mara_x), 300, 100, 200)
+            draw_hover_glow(screen, hover_rect, pygame.time.get_ticks())
 
         # Large centered card overlay (fade in/out handoff animation)
         if self.card_overlay_active and self.access_card_img:
@@ -540,13 +573,13 @@ class Chapter1_Arrival:
     def _handle_player_control(self, pos):
         """Handle player clicks during free exploration."""
         # Sign (optional)
-        if self.sign_rect.collidepoint(pos) and not self.sign_read:
+        if self.sign_rect.collidepoint(pos) and not self.sign_read and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
             self.sign_read = True
             self.game.dialogue.show_dialogue(
                 "Blackwood Research Facility.", "Elias")
 
         # Intercom (optional)
-        elif self.intercom_rect.collidepoint(pos) and not self.intercom_used:
+        elif self.intercom_rect.collidepoint(pos) and not self.intercom_used and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
             self.intercom_used = True
             self.intercom_static_active = True
             self.intercom_static_timer = 0
@@ -567,7 +600,7 @@ class Chapter1_Arrival:
                 self.intercom_static_active = False
 
         # Door
-        elif self.door_rect.collidepoint(pos):
+        elif self.door_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if self.phase == 'door_unlocked':
                         self._enter_facility()
                     elif self.card_done:
@@ -585,7 +618,7 @@ class Chapter1_Arrival:
 
         # Mara
         elif (self.mara_rect.collidepoint(pos) or
-              pygame.Rect(int(self.mara_x), 300, 100, 200).collidepoint(pos)):
+              pygame.Rect(int(self.mara_x), 300, 100, 200).collidepoint(pos)) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
             if self.phase == 'card_given' and not self.card_done:
                 self.phase = 'card_given'
                 self._start_card_handoff()
@@ -766,6 +799,25 @@ class Chapter1_Orientation:
                 ind = render_text(self.small_font, "LOCKED", COLORS['red'])
                 screen.blit(ind, (rect.x + 40, rect.y + 50))
 
+        # Corridor room hover glows (drawn after rooms so they appear on top)
+        if not self.dialogue_playing and not self.fade_active and not self.mara_fade_active:
+            if (self.greenhouse_rect.collidepoint(pygame.mouse.get_pos())):
+                draw_hover_glow(screen, self.greenhouse_rect, pygame.time.get_ticks())
+            elif (self.restricted_rect.collidepoint(pygame.mouse.get_pos())
+                  and not self.restricted_done):
+                draw_hover_glow(screen, self.restricted_rect, pygame.time.get_ticks())
+            elif (self.office_rect.collidepoint(pygame.mouse.get_pos())
+                  and not self.office_clicked):
+                draw_hover_glow(screen, self.office_rect, pygame.time.get_ticks())
+            elif (self.storage_rect.collidepoint(pygame.mouse.get_pos())
+                  and not self.storage_clicked):
+                draw_hover_glow(screen, self.storage_rect, pygame.time.get_ticks())
+
+        # Mara hover glow
+        mara_hover_rect = pygame.Rect(int(self.mara_x), 300, 100, 200)
+        if mara_hover_rect.collidepoint(pygame.mouse.get_pos()) and not self.mara_fade_active:
+            draw_hover_glow(screen, mara_hover_rect, pygame.time.get_ticks())
+
         # Mara with fade alpha
         mx = int(self.mara_x)
         if self.mara_img:
@@ -860,7 +912,7 @@ class Chapter1_Orientation:
 
                 # Restricted Lab
                 if (self.restricted_rect.collidepoint(pos) and
-                        not self.restricted_done):
+                        not self.restricted_done and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
                     self.restricted_done = True
                     text, speaker = self.restricted_lines[self.restricted_idx]
                     self.game.dialogue.show_dialogue(text, speaker)
@@ -870,7 +922,7 @@ class Chapter1_Orientation:
 
                 # Staff Office
                 elif (self.office_rect.collidepoint(pos) and
-                        not self.office_clicked):
+                        not self.office_clicked and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
                     self.office_clicked = True
                     self.game.dialogue.show_dialogue(
                         "Staff Office. Mara's workspace.\nClosed for now.",
@@ -878,14 +930,14 @@ class Chapter1_Orientation:
 
                 # Storage
                 elif (self.storage_rect.collidepoint(pos) and
-                        not self.storage_clicked):
+                        not self.storage_clicked and not self.dialogue_playing and not self.game.dialogue.current_dialogue):
                     self.storage_clicked = True
                     self.game.dialogue.show_dialogue(
                         "Storage room. Contains general supplies.",
                         "Elias")
 
                 # Greenhouse
-                elif self.greenhouse_rect.collidepoint(pos):
+                elif self.greenhouse_rect.collidepoint(pos) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if self.phase in ('rules_given', 'greenhouse_open'):
                         if not self.greenhouse_entrance_done:
                             self._greenhouse_entrance()
@@ -899,7 +951,7 @@ class Chapter1_Orientation:
                 # Mara
                 elif (self.mara_rect.collidepoint(pos) or
                       pygame.Rect(int(self.mara_x), 300, 100,
-                                  200).collidepoint(pos)):
+                                  200).collidepoint(pos)) and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     if self.phase not in ('rules_given', 'greenhouse_open'):
                         self._give_rules()
 

@@ -7,7 +7,7 @@ Includes screen shake, hallucination, and title card.
 
 import math
 import pygame
-from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
+from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio, draw_hover_glow
 from blooming.utils import COLORS
 from blooming.utils.particles import ParticleSystem
 from blooming.utils.screen_shake import ScreenShake
@@ -82,6 +82,24 @@ class Chapter4_Horror:
         t_alpha = max(0, 255 - self.phase * 40)
         table_surf.fill((100, 80, 60, t_alpha))
         screen.blit(table_surf, (400, 370))
+
+        # X-17 hover glow
+        if self.phase >= 1 and pygame.mouse.get_pos() and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+            x17_rect = pygame.Rect(450, 250, 120, 120)
+            if x17_rect.collidepoint(pygame.mouse.get_pos()):
+                draw_hover_glow(screen, x17_rect, pygame.time.get_ticks())
+
+        # Intercom hover glow
+        if self.phase < 3 and pygame.mouse.get_pos() and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+            intercom_rect = pygame.Rect(900, 300, 100, 120)
+            if intercom_rect.collidepoint(pygame.mouse.get_pos()):
+                draw_hover_glow(screen, intercom_rect, pygame.time.get_ticks())
+
+        # Exit hover glow
+        if self.phase < 3 and pygame.mouse.get_pos() and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
+            exit_rect = pygame.Rect(100, 500, 150, 60)
+            if exit_rect.collidepoint(pygame.mouse.get_pos()):
+                draw_hover_glow(screen, exit_rect, pygame.time.get_ticks())
 
         # X-17 glow effect
         if self.phase >= 3 and self.flower_closed_img:
@@ -260,7 +278,7 @@ class Chapter4_Horror:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
 
-                if self.phase < 3 and not self.response_given:
+                if self.phase < 3 and not self.response_given and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     # Check X-17 click
                     x17_rect = pygame.Rect(450, 250, 120, 120)
                     if x17_rect.collidepoint(pos):
@@ -268,7 +286,7 @@ class Chapter4_Horror:
                         self._give_horror_response()
 
                 # Intercom option
-                elif self.phase < 3 and not self.response_given:
+                elif self.phase < 3 and not self.response_given and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     intercom_rect = pygame.Rect(900, 300, 100, 120)
                     if intercom_rect.collidepoint(pos):
                         self.response_given = True
@@ -280,7 +298,7 @@ class Chapter4_Horror:
                         self.game.sanity.decrease_sanity(10)
 
                 # Exit option
-                elif self.phase < 3 and not self.response_given:
+                elif self.phase < 3 and not self.response_given and not self.dialogue_playing and not self.game.dialogue.current_dialogue:
                     exit_rect = pygame.Rect(100, 500, 150, 60)
                     if exit_rect.collidepoint(pos):
                         self.response_given = True
