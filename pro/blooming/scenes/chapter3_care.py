@@ -47,6 +47,11 @@ class Chapter3_Care:
         # Particles
         self.particles = ParticleSystem()
 
+        # Chapter title screen
+        from blooming.scenes.chapter_title import ChapterTitleScreen
+        self.title_screen = ChapterTitleScreen(3, "Plant Care")
+        self.title_active = True
+
         # Timer for radio call
         self.elapsed_frames = 0
 
@@ -56,6 +61,10 @@ class Chapter3_Care:
 
     def draw(self, screen):
         """Draw the greenhouse care scene."""
+        if self.title_active:
+            self.title_screen.draw(screen)
+            return
+
         if self.entered:
             return
 
@@ -165,6 +174,12 @@ class Chapter3_Care:
 
     def update(self, events: list):
         """Handle watering scene interactions."""
+        # Title screen
+        if self.title_active:
+            if self.title_screen.update(events):
+                self.title_active = False
+            return
+
         if self.entered:
             return
 

@@ -48,12 +48,21 @@ class Chapter4_Horror:
         self.flicker_active = False
         self.flicker_timer = 0
 
+        # Chapter title screen
+        from blooming.scenes.chapter_title import ChapterTitleScreen
+        self.title_screen = ChapterTitleScreen(4, "Supernatural")
+        self.title_active = True
+
     @property
     def active(self):
         return self.phase < 5
 
     def draw(self, screen):
         """Draw the horror sequence."""
+        if self.title_active:
+            self.title_screen.draw(screen)
+            return
+
         if self.phase >= 4:
             return
 
@@ -204,6 +213,13 @@ class Chapter4_Horror:
 
     def update(self, events: list):
         """Update horror sequence phases."""
+        # Title screen
+        if self.title_active:
+            if self.title_screen.update(events):
+                self.title_active = False
+                self.phase = 1
+            return
+
         self.timer += 1
 
         # Phase progression

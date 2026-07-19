@@ -72,6 +72,11 @@ class Chapter2_Greenhouse:
         self._pending_inspect_x17 = False
         self.particles = ParticleSystem()
 
+        # Chapter title screen
+        from blooming.scenes.chapter_title import ChapterTitleScreen
+        self.title_screen = ChapterTitleScreen(2, "Greenhouse")
+        self.title_active = True
+
         # Dialogue queue for non-choice dialogues
         self.dialogue_queue = []
         self.dialogue_idx = 0
@@ -193,6 +198,10 @@ class Chapter2_Greenhouse:
 
     def draw(self, screen):
         """Draw the greenhouse scene."""
+        if self.title_active:
+            self.title_screen.draw(screen)
+            return
+
         if self.phase == 'entered':
             return
 
@@ -631,11 +640,15 @@ class Chapter2_Greenhouse:
 
     def update(self, events: list):
         """Handle greenhouse interactions."""
-        if self.phase == 'entered':
+        # Title screen
+        if self.title_active:
+            if self.title_screen.update(events):
+                self.title_active = False
+                self.phase = 'greenhouse_intro'
             return
 
-
-
+        if self.phase == 'entered':
+            return
         # Intro dialogue auto-play
         if self.phase == 'greenhouse_intro' and not self.intro_dialogue_done:
             if self.intro_idx >= len(self.intro_lines):

@@ -102,6 +102,11 @@ class Chapter1_Arrival:
         self.mara_target_x = 500
         self.mara_animating = False
 
+        # Chapter title screen
+        from blooming.scenes.chapter_title import ChapterTitleScreen
+        self.title_screen = ChapterTitleScreen(1, "Arrival")
+        self.title_active = True
+
         # Fade-in system: start fully black, fade to 0 (reveal scene)
         self.fade_alpha = 255
         self.fade_target = 0
@@ -217,6 +222,11 @@ class Chapter1_Arrival:
     def draw(self, screen):
         """Draw the arrival scene with fade overlay."""
         if self.phase == 'done':
+            return
+
+        # Draw title screen
+        if self.title_active:
+            self.title_screen.draw(screen)
             return
 
         # Draw scene
@@ -430,14 +440,22 @@ class Chapter1_Arrival:
         """Handle scene with visual novel style flow.
 
         Phase flow:
-        1. 'fade_in' -> background/character fade in
-        2. 'greeting' -> auto-play dialogue, click to advance
-        3. 'player_control' -> click hotspots
-        4. 'card_given' -> click to advance through card dialogue
-        5. 'door_unlocked' -> use card on door
-        6. 'done' -> transition to Scene 2
+        1. 'title' -> chapter title screen
+        2. 'fade_in' -> background/character fade in
+        3. 'greeting' -> auto-play dialogue, click to advance
+        4. 'player_control' -> click hotspots
+        5. 'card_given' -> click to advance through card dialogue
+        6. 'door_unlocked' -> use card on door
+        7. 'done' -> transition to Scene 2
         """
         if self.phase == 'done':
+            return
+
+        # Title screen
+        if self.title_active:
+            if self.title_screen.update(events):
+                self.title_active = False
+                self.phase = 'greeting'
             return
 
         # Update fade: 255 → 0 (reveal scene)
@@ -677,6 +695,11 @@ class Chapter1_Orientation:
         self.mara_img = load_image('char/mara-vale.png')
         self.door_img = load_image('props/security-door.png')
 
+        # Chapter title screen
+        from blooming.scenes.chapter_title import ChapterTitleScreen
+        self.title_screen = ChapterTitleScreen(1, "Orientation")
+        self.title_active = True
+
         # Fade-in system: start black, fade to 0
         self.fade_alpha = 255
         self.fade_target = 0
@@ -764,6 +787,11 @@ class Chapter1_Orientation:
     def draw(self, screen):
         """Draw the corridor scene with fade overlay."""
         if self.phase == 'enter_greenhouse':
+            return
+
+        # Draw title screen
+        if self.title_active:
+            self.title_screen.draw(screen)
             return
 
         # Background
@@ -856,6 +884,13 @@ class Chapter1_Orientation:
 
     def update(self, events: list):
         """Handle corridor interactions with visual novel flow."""
+        # Title screen
+        if self.title_active:
+            if self.title_screen.update(events):
+                self.title_active = False
+                self.phase = 'corridor_intro'
+            return
+
         # Update fade: 255 → 0
         if self.fade_active:
             self.fade_elapsed += 1

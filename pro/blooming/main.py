@@ -186,7 +186,9 @@ class Game:
             self.sfx_volume = self.pause_menu.sfx_volume
 
             # Update
-            self.dialogue.update(events)
+            has_title = getattr(self.current_scene, 'title_active', False)
+            if not has_title:
+                self.dialogue.update(events)
             self.sanity.update()
 
             # Handle scene transitions
