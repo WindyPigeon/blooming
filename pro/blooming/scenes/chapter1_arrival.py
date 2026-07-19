@@ -552,6 +552,28 @@ class Chapter1_Orientation:
         self.restricted_idx = 0
         self.restricted_done = False
 
+        # Greenhouse entrance dialogue
+        self.greenhouse_entrance_lines = [
+            ("You made good time.", "Mara"),
+            ("The greenhouse is at the end of the corridor.", "Elias"),
+            ("I saw it.", "Mara"),
+            ("This is it.", "Mara"),
+        ]
+        self.greenhouse_entrance_idx = 0
+        self.greenhouse_entrance_done = False
+        self.greenhouse_entrance_dialogue_shown = False
+
+        # Post-door-close dialogue
+        self.post_door_lines = [
+            ("Is this where I work?", "Elias"),
+            ("For now.", "Mara"),
+            ("So...", "Elias"),
+            ("Don't touch anything until I tell you to.", "Mara"),
+        ]
+        self.post_door_idx = 0
+        self.post_door_done = False
+        self.post_door_dialogue_shown = False
+
         # Mara position
         self.mara_x = 650
         self.mara_target_x = 850
@@ -720,7 +742,12 @@ class Chapter1_Orientation:
                 # Greenhouse
                 elif self.greenhouse_rect.collidepoint(pos):
                     if self.phase in ('rules_given', 'greenhouse_open'):
-                        self._enter_greenhouse()
+                        if not self.greenhouse_entrance_done:
+                            self._greenhouse_entrance()
+                        elif not self.post_door_dialogue_shown:
+                            self._post_door_close()
+                        else:
+                            self._enter_greenhouse()
                     elif not self.rules_done:
                         self._give_rules()
 
@@ -755,9 +782,93 @@ class Chapter1_Orientation:
             else:
                 self.dialogue_playing = False
                 self.dialogue_lines = []
+                if self.phase == 'corridor_play':
+                    self.corridor_done = True
+                    self.phase = 'player_control'
+                elif self.phase == 'greenhouse_entrance':
+                    self.greenhouse_entrance_done = True
+                    self.phase = 'greenhouse_open'
+                elif self.phase == 'post_door_close':
+                    self.post_door_dialogue_shown = True
+                    self._enter_greenhouse()
         else:
             self.dialogue_playing = False
             self.dialogue_lines = []
+            if self.phase == 'corridor_play':
+                self.corridor_done = True
+                self.phase = 'player_control'
+            elif self.phase == 'greenhouse_entrance':
+                self.greenhouse_entrance_done = True
+                self.phase = 'greenhouse_open'
+            elif self.phase == 'post_door_close':
+                self.post_door_dialogue_shown = True
+                self._enter_greenhouse()
+
+    def _greenhouse_entrance(self):
+        """Show greenhouse entrance dialogue sequence."""
+        if self.greenhouse_entrance_dialogue_shown:
+            self.phase = 'greenhouse_open'
+            return
+        self.greenhouse_entrance_dialogue_shown = True
+        self.phase = 'greenhouse_entrance'
+        self.dialogue_lines = self.greenhouse_entrance_lines[:]
+        self.dialogue_idx = 0
+        self.dialogue_playing = True
+        self._show_next_greenhouse_entrance_line()
+
+    def _show_next_greenhouse_entrance_line(self):
+        """Show next greenhouse entrance line."""
+        if self.dialogue_idx < len(self.dialogue_lines):
+            text, speaker = self.dialogue_lines[self.dialogue_idx]
+            self.game.dialogue.show_dialogue(text, speaker)
+
+    def _advance_greenhouse_entrance_dialogue(self):
+        """Advance greenhouse entrance dialogue."""
+        if self.dialogue_idx < len(self.dialogue_lines):
+            self.dialogue_idx += 1
+            if self.dialogue_idx < len(self.dialogue_lines):
+                text, speaker = self.dialogue_lines[self.dialogue_idx]
+                self.game.dialogue.show_dialogue(text, speaker)
+            else:
+                self.dialogue_playing = False
+                self.dialogue_lines = []
+                self.greenhouse_entrance_done = True
+                self.phase = 'greenhouse_open'
+        else:
+            self.dialogue_playing = False
+            self.dialogue_lines = []
+            self.greenhouse_entrance_done = True
+            self.phase = 'greenhouse_open'
+
+    def _post_door_close(self):
+        """Show dialogue after greenhouse door closes."""
+        self.dialogue_lines = self.post_door_lines[:]
+        self.dialogue_idx = 0
+        self.dialogue_playing = True
+        self.phase = 'post_door_close'
+        self._show_next_post_door_line()
+
+    def _show_next_post_door_line(self):
+        """Show next post-door line."""
+        if self.dialogue_idx < len(self.dialogue_lines):
+            text, speaker = self.dialogue_lines[self.dialogue_idx]
+            self.game.dialogue.show_dialogue(text, speaker)
+
+    def _advance_post_door_dialogue(self):
+        """Advance post-door dialogue."""
+        if self.dialogue_idx < len(self.dialogue_lines):
+            self.dialogue_idx += 1
+            if self.dialogue_idx < len(self.dialogue_lines):
+                text, speaker = self.dialogue_lines[self.dialogue_idx]
+                self.game.dialogue.show_dialogue(text, speaker)
+            else:
+                self.dialogue_playing = False
+                self.dialogue_lines = []
+                self._enter_greenhouse()
+        else:
+            self.dialogue_playing = False
+            self.dialogue_lines = []
+            self._enter_greenhouse()
 
     def _give_rules(self):
         """Mara gives rules. Matches screenplay SEQ 02."""

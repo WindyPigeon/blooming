@@ -310,8 +310,8 @@ class Chapter3_Care:
     def _use_intercom(self):
         """Use the intercom after Mara leaves."""
         self.game.dialogue.show_dialogue(
-            "Dr. Vale?\nMara, are you there?\nStatic continues.\nThen a faint "
-            "voice emerges.\nI'm here.\nThe intercom shuts down.\nNo.",
+            "Dr. Vale?\nMara, are you there?\nStatic... then: "
+            "I'm here.\nThe intercom shuts down.",
             "Elias")
         self.game.sanity.decrease_sanity(10)
         self.game.flags['first_horror_response'] = 'intercom'
@@ -324,6 +324,7 @@ class Chapter3_Care:
                                             'Investigate the change in X-17',
                                             'Click the glowing X-17')
         self.game.flags['first_supernatural_observed'] = True
+        self.game.dialogue.show_dialogue("What the hell?", "Elias")
         self._schedule_horror_transition()
 
     def _schedule_horror_transition(self):

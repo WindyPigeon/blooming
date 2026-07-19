@@ -204,9 +204,20 @@ class Chapter4_Horror:
                 self.game.sanity.decrease_sanity(10)
                 self.shake.shake(10, 30)
                 self.particles.add_spore(510, 300, 10)
-                self.game.dialogue.show_dialogue(
-                    "Elias...",
-                    "???")
+                if self.whisper_counter == 1:
+                    self.game.dialogue.show_dialogue(
+                        "Elias.",
+                        "???")
+                    self.game.dialogue.show_dialogue(
+                        "...Mara?",
+                        "Elias")
+                else:
+                    self.game.dialogue.show_dialogue(
+                        "Elias...",
+                        "???")
+                    # Screen distortion after second plant whisper
+                    if self.whisper_counter == 2:
+                        self.shake.shake(20, 18)
             if self.whisper_counter >= 5:
                 self.phase = 3
 

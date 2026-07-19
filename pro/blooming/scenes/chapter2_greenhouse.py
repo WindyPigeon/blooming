@@ -30,7 +30,7 @@ class Chapter2_Greenhouse:
         # Hotspot rects
         self.watering_can_rect = pygame.Rect(100, 400, 80, 80)
         self.sink_rect = pygame.Rect(250, 400, 80, 80)
-        self.clipboard_rect = pygame.Rect(400, 400, 80, 80)
+        self.clipboard_rect = pygame.Rect(640, 420, 80, 80)
         self.thermometer_rect = pygame.Rect(900, 100, 60, 120)
         self.cabinet_rect = pygame.Rect(800, 400, 80, 80)
         self.journal_rect = pygame.Rect(700, 400, 80, 80)
@@ -61,8 +61,12 @@ class Chapter2_Greenhouse:
         self.mara_left = False
         self.clipboard_read = False
         self.journal_closed = False
+        self.clipboard_read_post_dialogue = False
         self.entered = False
         self.phase = 'greenhouse_intro'
+        self._pending_chapter3 = False
+        self._pending_watering = False
+        self._pending_water_x17 = False
         self.particles = ParticleSystem()
 
         # Dialogue queue for non-choice dialogues
@@ -70,6 +74,9 @@ class Chapter2_Greenhouse:
         self.dialogue_idx = 0
         self.dialogue_playing = False
         self.pending_transition = False
+        self.waiting_for_choice = False
+        self.pending_obs_instruction = False
+        self.just_started_dialogue = False
 
         # Images
         self.interior_img = load_image('backgrounds/greenhouse-interior.png')
@@ -89,6 +96,12 @@ class Chapter2_Greenhouse:
         self.observed_stem = False
         self.observed_soil = False
         self.first_impression = None
+        self._inspection_options_shown = False
+        self.show_first_impression_choice = False
+        self.show_inspection_options = False
+        self.observation_instruction_shown = False
+        self.show_observation_instruction = False
+        self.show_first_impression_choice_done = False
 
         # Care sheet display
         self.showing_care_sheet = False
@@ -383,21 +396,8 @@ class Chapter2_Greenhouse:
     def _draw_observation(self, screen):
         """Draw observation mode UI."""
         overlay = pygame.Surface((1024, 768), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 100))
+        overlay.fill((0, 0, 0, 60))
         screen.blit(overlay, (0, 0))
-
-        # Hotspots for inspection
-        inspection_points = [
-            (460, 260, "PETALS"),
-            (510, 310, "STEM"),
-            (510, 380, "SOIL"),
-        ]
-        for px, py, label in inspection_points:
-            rect = pygame.Rect(px, py, 80, 40)
-            pygame.draw.rect(screen, COLORS['yellow'], rect)
-            pygame.draw.rect(screen, COLORS['white'], rect, 1)
-            lbl = render_text(make_font(12), label, COLORS['black'])
-            screen.blit(lbl, (px + 5, py + 10))
 
     def _draw_care_sheet(self, screen):
         """Draw the X-17 care instructions document."""
@@ -433,30 +433,176 @@ class Chapter2_Greenhouse:
 
     def _advance_dialogue(self):
         """Advance to the next queued dialogue line."""
-        if self.dialogue_idx < len(self.dialogue_queue):
-            text, speaker = self.dialogue_queue[self.dialogue_idx]
-            self.game.dialogue.clear()
-            self.game.dialogue.show_dialogue(text, speaker)
+        if self.dialogue_idx < len(self.game.dialogue._dialogue_queue):
+            item = self.game.dialogue._dialogue_queue[self.dialogue_idx]
+            if isinstance(item, dict):
+                text, speaker = item['text'], item['speaker']
+                choices = item.get('choices')
+                callback = item.get('callback')
+                self.game.dialogue.current_dialogue = {
+                    'text': text,
+                    'speaker': speaker,
+                    'lines': self.game.dialogue._wrap_text(text, 550),
+                }
+                self.game.dialogue.choices = choices or []
+                self.game.dialogue.choice_callback = callback
+                self.game.dialogue.typewriter_text = text
+                if choices:
+                    self.waiting_for_choice = True
+                else:
+                    self.waiting_for_choice = False
+            else:
+                text, speaker = item
+                self.game.dialogue.current_dialogue = {
+                    'text': text,
+                    'speaker': speaker,
+                    'lines': self.game.dialogue._wrap_text(text, 550),
+                }
+                self.game.dialogue.choices = []
+                self.game.dialogue.choice_callback = None
+                self.game.dialogue.typewriter_text = text
+                self.waiting_for_choice = False
+            self.game.dialogue.typewriter_index = 0
+            self.game.dialogue.typewriter_active = False
+            self.game.dialogue.typewriter_delay = len(self.game.dialogue.typewriter_text) * self.game.dialogue.typewriter_speed
             self.dialogue_idx += 1
         else:
-            self.dialogue_playing = False
-            self.game.dialogue.clear()
-            if self.pending_transition:
-                self.pending_transition = False
+            # Check state flags BEFORE clearing the queue/dialogue
+            if self.pending_obs_instruction:
+                self.pending_obs_instruction = False
+                if not self.observation_instruction_shown:
+                    self._show_observation_instruction()
+                    return
+                # Observation instruction already shown - transition to inspection options
+                if self.first_impression is None:
+                    self.show_first_impression_choice = True
+                    self.just_started_dialogue = True
+                    return
+                self.show_inspection_options = True
+                self.show_first_impression_choice = False  # Clear to prevent re-trigger
+                self.just_started_dialogue = True
+                return
+            if self.show_observation_instruction:
+                self.show_observation_instruction = False
+                self.pending_obs_instruction = True
+                self.game.dialogue.current_dialogue = None
+                return
+            if self.show_first_impression_choice:
+                self.show_first_impression_choice = False
+                if self.first_impression is None:
+                    self._show_first_impression_choice()
+                else:
+                    self.just_started_dialogue = True
+                return
+            if self._pending_chapter3:
+                self._pending_chapter3 = False
+                self.game.dialogue.current_dialogue = None
+                self.game.dialogue.choices = []
+                self.game.dialogue.choice_callback = None
                 self._transition_to_scene4()
+                return
+            if self._pending_watering:
+                self._pending_watering = False
+                self.phase = 'watering'
+                self.game.dialogue.current_dialogue = None
+                self.game.dialogue.choices = []
+                self.game.dialogue.choice_callback = None
+                self._start_watering()
+                return
+            if self._pending_water_x17:
+                self._pending_water_x17 = False
+                self.game.dialogue.current_dialogue = None
+                self.game.dialogue.choices = []
+                self.game.dialogue.choice_callback = None
+                self._show_water_x17_prompt()
+                return
+            # Check state flags that should run AFTER queue exhaustion
+            if self.show_first_impression_choice:
+                if self.first_impression is None:
+                    self.show_first_impression_choice = False
+                    self._show_first_impression_choice()
+                    return
+                else:
+                    # Player already made choice - clear flag to prevent infinite loop
+                    self.show_first_impression_choice = False
+                    if not self.show_inspection_options:
+                        self.show_inspection_options = True
+                return
+            if self.show_observation_instruction:
+                self.show_observation_instruction = False
+                self.pending_obs_instruction = True
+                return
+            # Now safe to clear
+            self.dialogue_playing = False
+            self.game.dialogue.current_dialogue = None
+            self.game.dialogue.clear()
+            self.dialogue_queue = []
+            self.dialogue_idx = 0
+            self.waiting_for_choice = False
 
-    def _queue_dialogue(self, text, speaker):
+    def _queue_dialogue(self, text, speaker, choices=None, callback=None):
         """Queue a dialogue line for sequential display."""
-        self.dialogue_queue.append((text, speaker))
+        if choices is not None:
+            self.dialogue_queue.append({
+                'text': text,
+                'speaker': speaker,
+                'choices': choices,
+                'callback': callback,
+            })
+        else:
+            self.dialogue_queue.append((text, speaker))
+
+    def _display_queued(self):
+        """Display the dialogue at dialogue_idx (updates display state only)."""
+        if not self.dialogue_queue or self.dialogue_idx >= len(self.dialogue_queue):
+            return
+        item = self.dialogue_queue[self.dialogue_idx]
+        self.waiting_for_choice = False
+        if isinstance(item, dict):
+            text, speaker = item['text'], item['speaker']
+            choices = item.get('choices', [])
+            self.game.dialogue.current_dialogue = {
+                'text': text,
+                'speaker': speaker,
+                'lines': self.game.dialogue._wrap_text(text, 550),
+            }
+            self.game.dialogue.choices = choices
+            self.game.dialogue.choice_callback = item.get('callback')
+            self.game.dialogue.typewriter_text = text
+            if choices:
+                self.waiting_for_choice = True
+        else:
+            text, speaker = item
+            self.game.dialogue.current_dialogue = {
+                'text': text,
+                'speaker': speaker,
+                'lines': self.game.dialogue._wrap_text(text, 550),
+            }
+            self.game.dialogue.choices = []
+            self.game.dialogue.choice_callback = None
+            self.game.dialogue.typewriter_text = text
+        self.game.dialogue.typewriter_index = 0
+        self.game.dialogue.typewriter_active = False
+        self.game.dialogue.typewriter_delay = len(self.game.dialogue.typewriter_text) * self.game.dialogue.typewriter_speed
 
     def _start_queued_dialogue(self):
-        """Start showing queued dialogues."""
-        if not self.dialogue_playing and self.dialogue_queue:
-            self.dialogue_playing = True
-            self.dialogue_idx = 0
-            text, speaker = self.dialogue_queue[0]
-            self.game.dialogue.clear()
-            self.game.dialogue.show_dialogue(text, speaker)
+        """Sync greenhouse queue to dialogue system and display current item."""
+        self.game.dialogue._dialogue_queue = []
+        for item in self.dialogue_queue:
+            if isinstance(item, dict):
+                self.game.dialogue._dialogue_queue.append(item)
+            else:
+                text, speaker = item
+                self.game.dialogue._dialogue_queue.append({
+                    'text': text,
+                    'speaker': speaker,
+                    'choices': [],
+                    'callback': None,
+                    'auto_advance': False,
+                })
+        self.game.dialogue._queue_index = self.dialogue_idx
+        self._display_queued()
+        self.just_started_dialogue = True
 
     def update(self, events: list):
         """Handle greenhouse interactions."""
@@ -524,7 +670,6 @@ class Chapter2_Greenhouse:
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = event.pos
-
                 # Click to advance intro dialogue (before hotspot checks)
                 if self.phase == 'greenhouse_intro' and not self.intro_dialogue_done:
                     if self.game.dialogue.current_dialogue:
@@ -540,39 +685,163 @@ class Chapter2_Greenhouse:
                             self.phase = 'explore'
                         continue
 
-                # Click to advance queued dialogue (explore phase)
-                if self.dialogue_playing and self.game.dialogue.current_dialogue:
-                    self._advance_dialogue()
-                    continue
-
                 # Close care sheet
                 if self.showing_care_sheet:
                     self.showing_care_sheet = False
+                    if not self.clipboard_read_post_dialogue:
+                        self._clipboard_after_care_sheet()
+                        self.clipboard_read_post_dialogue = True
                     continue
 
                 # Observation mode
                 if self.observation_active:
-                    if pygame.Rect(460, 260, 80, 40).collidepoint(pos):
-                        self._inspect_petals()
-                    elif pygame.Rect(510, 310, 80, 40).collidepoint(pos):
-                        self._inspect_stem()
-                    elif pygame.Rect(510, 380, 80, 40).collidepoint(pos):
-                        self._inspect_soil()
+                    choice_clicked = False
+                    has_choice_dialogue = (self.game.dialogue.current_dialogue 
+                                           and self.game.dialogue.choices)
+                    # Check dialogue choice clicks first
+                    if has_choice_dialogue:
+                        text_y = self.game.dialogue.box_rect.y + 50
+                        for line in self.game.dialogue._wrap_text(
+                                self.game.dialogue.typewriter_text if self.game.dialogue.typewriter_active
+                                else self.game.dialogue.current_dialogue['text'], 550):
+                            text_y += 30
+                        choice_y = text_y + 5
+                        for i, choice in enumerate(self.game.dialogue.choices):
+                            y_pos = choice_y + i * 28
+                            if (150 <= pos[0] <= 1024 - 150
+                                    and y_pos <= pos[1] <= y_pos + 22):
+                                self.game.dialogue.choice_callback(choice)
+                                choice_clicked = True
+                    if choice_clicked:
+                        continue
+                    # Check pending transitions before skipping hotspot checks
+                    if self.show_inspection_options:
+                        print(f"[PENDING insp] pending={getattr(self, '_pending_inspect_choice', None)}")
+                        self.show_inspection_options = False
+                        if getattr(self, '_pending_inspect_choice', None):
+                            choice = self._pending_inspect_choice
+                            self._pending_inspect_choice = None
+                            self.observation_active = True
+                            if choice == "Inspect petals":
+                                self._inspect_petals()
+                            elif choice == "Inspect stem":
+                                self._inspect_stem()
+                            elif choice == "Inspect soil":
+                                self._inspect_soil()
+                        else:
+                            self._inspection_options_shown = False
+                            self.observation_active = True
+                            self._observe_x17()
+                            self._inspection_options_shown = True
+                        continue
+                    # Skip hotspot checks when a choice dialogue is active
+                    if has_choice_dialogue:
+                        continue
+                    # Advance non-choice queued dialogues (e.g. soil chain)
+                    if self.dialogue_playing and self.game.dialogue.current_dialogue:
+                        self._advance_dialogue()
+                        continue
+                    # When no dialogue to advance but in observation mode, check X-17 for inspection options
+                    if self.phase == 'explore' and not self.x17_interacted:
+                        if self.x17_rect.collidepoint(pos):
+                            self._first_meet_x17()
+                            continue
+                    if self.phase == 'explore' and self.x17_interacted and not self.x17_watered:
+                        if self.x17_rect.collidepoint(pos) and not self.waiting_for_choice and self.observation_active:
+                            self._observe_x17()
+                            continue
                     continue
 
+                # Handle choice click for non-observation dialogues
+                if self.waiting_for_choice and self.game.dialogue.choices and self.game.dialogue.current_dialogue:
+                    if self.game.dialogue.choice_callback:
+                        pos = pygame.mouse.get_pos()
+                        text_y = self.game.dialogue.box_rect.y + 50
+                        for line in self.game.dialogue._wrap_text(
+                                self.game.dialogue.typewriter_text if self.game.dialogue.typewriter_active
+                                else self.game.dialogue.current_dialogue['text'], 550):
+                            text_y += 30
+                        choice_y = text_y + 5
+                        for i, choice in enumerate(self.game.dialogue.choices):
+                            y_pos = choice_y + i * 28
+                            if (150 <= pos[0] <= 1024 - 150
+                                    and y_pos <= pos[1] <= y_pos + 22):
+                                self.game.dialogue.choice_callback(choice)
+                                self.waiting_for_choice = False
+                                continue
+                        # Click was in dialogue area but not on a choice — advance
+                        self.waiting_for_choice = False
+                        if self.game.dialogue.current_dialogue:
+                            self._advance_dialogue()
+                            continue
+
+                # Advance non-observation queued dialogues
+                if self.dialogue_playing and self.game.dialogue.current_dialogue and not self.waiting_for_choice:
+                    if not self.just_started_dialogue:
+                        self._advance_dialogue()
+                        if self.pending_obs_instruction:
+                            self.pending_obs_instruction = False
+                            self._show_observation_instruction()
+                            continue
+                    self.just_started_dialogue = False
+                    continue
+
+                # Handle pending transitions after dialogue queue exhausted
+                if not self.game.dialogue.current_dialogue:
+                    if self._pending_chapter3:
+                        self._pending_chapter3 = False
+                        self.game.dialogue.current_dialogue = None
+                        self.game.dialogue.choices = []
+                        self.game.dialogue.choice_callback = None
+                        self._transition_to_scene4()
+                        continue
+                    if self._pending_watering:
+                        self._pending_watering = False
+                        self.phase = 'watering'
+                        self._start_watering()
+                        continue
+                    if self._pending_water_x17:
+                        self._pending_water_x17 = False
+                        self._show_water_x17_prompt()
+                        continue
+                    if self.show_observation_instruction:
+                        self.show_observation_instruction = False
+                        if not self.observation_instruction_shown:
+                            self.pending_obs_instruction = True
+                        continue
+                    if self.pending_obs_instruction:
+                        self.pending_obs_instruction = False
+                        if not self.observation_instruction_shown:
+                            self._show_observation_instruction()
+                        continue
+                    if self.show_first_impression_choice:
+                        if self.first_impression is None:
+                            self.show_first_impression_choice = False
+                            self._show_first_impression_choice()
+                            continue
+                        else:
+                            self.show_first_impression_choice = False
+                            if not self.show_inspection_options and not self.observation_instruction_shown:
+                                self.show_inspection_options = True
+                            continue
+                    if self.observation_instruction_shown:
+                        self.observation_instruction_shown = False
+                        self.observation_active = True
+                        continue
+                    if self.dialogue_playing:
+                        self.dialogue_playing = False
+                        self.game.dialogue._dialogue_queue = []
+                        self.game.dialogue._queue_index = 0
+                    if self.observation_active and not self.x17_watered:
+                        self.show_inspection_options = True
+                        self._inspection_options_shown = False
+
                 # Watering can
-                if self.watering_can_rect.collidepoint(pos):
+                if self.watering_can_rect.collidepoint(pos) and not self.waiting_for_choice:
                     if not self.watering_can_held:
-                        self.watering_can_held = True
-                        self.game.inventory.add_item('watering_can',
-                                                     'Empty Watering Can',
-                                                     image_path='props/watering-can.png')
-                        self.game.dialogue.show_dialogue(
-                            "Standard watering can.",
-                            "Elias",
-                            auto_advance=True)
+                        self._pickup_watering_can()
                     elif not self.watering_can_filled:
-                        self._try_fill_water()
+                        self._watering_can_after_pickup()
 
                 # Sink
                 elif self.sink_rect.collidepoint(pos):
@@ -581,17 +850,20 @@ class Chapter2_Greenhouse:
                     elif self.watering_can_held and self.watering_can_filled:
                         self.game.dialogue.show_dialogue(
                             "Already filled with 500 ml.",
-                            "Elias",
-                            auto_advance=True)
+                            "Elias")
                     else:
-                        self.game.dialogue.show_dialogue("Filtered water system?", "Elias", auto_advance=True)
-                        self.game.dialogue.show_dialogue("Yes.", "Mara", auto_advance=True)
-                        self.game.dialogue.show_dialogue(
+                        self.dialogue_queue = []
+                        self._queue_dialogue("Filtered water system?", "Elias")
+                        self._queue_dialogue("Yes.", "Mara")
+                        self._queue_dialogue(
                             "Specimens in this section don't receive water "
-                            "directly from the main supply.", "Mara", auto_advance=True)
-                        self.game.dialogue.show_dialogue("Why?", "Elias", auto_advance=True)
-                        self.game.dialogue.show_dialogue("Because contamination ruins research.", "Mara", auto_advance=True)
-                        self.game.dialogue.show_dialogue("And careers.", "Mara", auto_advance=True)
+                            "directly from the main supply.", "Mara")
+                        self._queue_dialogue("Why?", "Elias")
+                        self._queue_dialogue("Because contamination ruins research.", "Mara")
+                        self._queue_dialogue("And careers.", "Mara")
+                        self.dialogue_playing = True
+                        self.dialogue_idx = 0
+                        self._start_queued_dialogue()
 
                 # Clipboard
                 elif self.clipboard_rect.collidepoint(pos):
@@ -606,24 +878,21 @@ class Chapter2_Greenhouse:
                             "Daily care: 23-25°C, inspect for abnormalities, "
                             "500 ml filtered water, record reactions, "
                             "do not relocate.",
-                            "Elias",
-                            auto_advance=True)
+                            "Elias")
 
                 # Thermometer
                 elif self.thermometer_rect.collidepoint(pos):
                     self.game.dialogue.show_dialogue(
                         "Greenhouse thermometer: 24 degrees Celsius.\n"
                         "Within the required range.",
-                        "Elias",
-                        auto_advance=True)
+                        "Elias")
 
                 # Cabinet
                 elif self.cabinet_rect.collidepoint(pos):
                     self.game.dialogue.show_dialogue(
                         "Storage cabinet. Contains general supplies "
                         "and extra pots.",
-                        "Elias",
-                        auto_advance=True)
+                        "Elias")
 
                 # Journal
                 elif self.journal_rect.collidepoint(pos) and not self.journal_closed:
@@ -645,18 +914,48 @@ class Chapter2_Greenhouse:
                             self.game.dialogue.show_dialogue(
                                 "The watering can is empty.\nI need to fill it with 500 ml "
                                 "filtered water.",
-                                "Elias",
-                                auto_advance=True)
+                                "Elias")
                         elif not self.watering_can_held:
                             self.game.dialogue.show_dialogue(
                                 "I need to select the watering can first.",
-                                "Elias",
-                                auto_advance=True)
+                                "Elias")
+
+    def _pickup_watering_can(self):
+        """Pick up the watering can with dialogue sequence."""
+        self.watering_can_held = True
+        self.game.inventory.add_item('watering_can', 'Empty Watering Can', image_path='props/watering-can.png')
+        self.dialogue_queue = []
+        self._queue_dialogue("Standard watering can.", "Elias")
+        self._queue_dialogue("Take it.", "Mara")
+        self._queue_dialogue("Now?", "Elias")
+        self._queue_dialogue("Unless you're planning to carry water in your hands.", "Mara")
+        self.game.journal.add_objective('obj_water_x17', 'Prepare 500 ml Water', 'Fill watering can at the sink')
+        self._start_queued_dialogue()
+
+    def _watering_can_after_pickup(self):
+        """Dialogue after player has the watering can in hand."""
+        self.dialogue_queue = []
+        self._queue_dialogue("Good.", "Mara")
+        self._queue_dialogue("You know how to pick things up.", "Mara")
+        self._queue_dialogue("I did graduate from university.", "Elias")
+        self._queue_dialogue("We'll see how useful that was.", "Mara")
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
+        self._start_queued_dialogue()
+
+    def _clipboard_after_care_sheet(self):
+        """Dialogue after reading the care sheet for the first time."""
+        self.dialogue_queue = []
+        self._queue_dialogue("Five hundred milliliters.", "Elias")
+        self._queue_dialogue("Good.", "Mara")
+        self._queue_dialogue("Now you know why we write things down.", "Mara")
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
+        self._start_queued_dialogue()
 
     def _first_meet_x17(self):
         """First interaction with X-17 - dialogue and observation."""
         self.x17_interacted = True
-        self.observation_active = True
         self.dialogue_queue = []
         self._queue_dialogue("This is why you're here.", "Mara")
         self._queue_dialogue("That's it?", "Elias")
@@ -672,6 +971,74 @@ class Chapter2_Greenhouse:
         self._queue_dialogue("Family?", "Elias")
         self._queue_dialogue(
             "If we knew that, Elias, we wouldn't need you.", "Mara")
+        self.game.journal.add_objective('obj_inspect_x17',
+                                        'Inspect X-17',
+                                        'Examine petals, stem, and soil')
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
+        self._start_queued_dialogue()
+        self.show_first_impression_choice = True
+
+    def _observe_x17(self):
+        """Second X-17 interaction - observation mode."""
+        if self.observation_active and getattr(self, '_inspection_options_shown', False):
+            self.observation_active = False
+            self.dialogue_playing = False
+            self.dialogue_queue = []
+            return
+        self.observation_active = True
+        self.dialogue_queue = []
+        self._queue_dialogue(
+            "Inspect X-17 for changes.\nCheck petals, stem, and soil.",
+            "Mara",
+            ["Inspect petals", "Inspect stem", "Inspect soil", "Back"],
+            lambda c: self._observe_choice(c))
+        self.dialogue_idx = 0
+        self.dialogue_playing = True
+        self._display_queued()
+        self.just_started_dialogue = True
+        self._inspection_options_shown = True
+
+    def _observe_choice(self, choice: str):
+        """Handle observation mode choices."""
+        if choice == "Back":
+            self.observation_active = False
+            self.dialogue_playing = False
+            self.dialogue_queue = []
+            self._inspection_options_shown = False
+        elif choice in ("Inspect petals", "Inspect stem", "Inspect soil"):
+            self._pending_inspect_choice = choice
+            self.show_inspection_options = True
+
+    def _show_first_impression_choice(self):
+        """Show first impression dialogue choice (before player picks one)."""
+        if self.first_impression is not None:
+            # Already made a choice - don't call this again
+            self.show_first_impression_choice = False
+            if self.observation_instruction_shown:
+                self.show_inspection_options = True
+            return
+        
+        self.dialogue_queue = []
+        self._queue_dialogue(
+            "What do you think?",
+            "Mara",
+            ["It looks dangerous.", "It's beautiful.", "It looks unusual."],
+            lambda c: self._first_impression_callback(c))
+        self.dialogue_idx = 0
+        self.dialogue_playing = True
+        self._display_queued()
+        self.just_started_dialogue = True
+
+    def _show_observation_instruction(self):
+        """Show observation instruction after first impression choice."""
+        print(f"[_show_observation_instruction] obs_instr_shown={self.observation_instruction_shown}, pending={self.pending_obs_instruction}")
+        if self.observation_instruction_shown:
+            print(f"  RETURNED (already shown)")
+            return
+        self.observation_instruction_shown = True
+        self.show_observation_instruction = False
+        self.dialogue_queue = []
         self._queue_dialogue("Before you do anything...", "Mara")
         self._queue_dialogue("Inspect it.", "Mara")
         self._queue_dialogue("What am I looking for?", "Elias")
@@ -679,16 +1046,34 @@ class Chapter2_Greenhouse:
         self.game.journal.add_objective('obj_inspect_x17',
                                         'Inspect X-17',
                                         'Examine petals, stem, and soil')
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
         self._start_queued_dialogue()
+        self.just_started_dialogue = True
 
-    def _observe_x17(self):
-        """Second X-17 interaction - observation mode."""
-        self.observation_active = True
-        self.game.dialogue.show_dialogue(
-            "Inspect X-17 for changes.\nCheck petals, stem, and soil.",
-            "Mara",
-            ["Inspect petals", "Inspect stem", "Inspect soil"],
-            lambda c: None)
+    def _first_impression_callback(self, choice: str):
+        """Handle first impression dialogue choice."""
+        self.dialogue_queue = []
+        if choice == "It looks dangerous.":
+            self._queue_dialogue("I expected something more dangerous.", "Elias")
+            self._queue_dialogue("Appearances are unreliable.", "Mara")
+            self.first_impression = "dangerous"
+            self.game.flags['first_impression'] = 'dangerous'
+        elif choice == "It's beautiful.":
+            self._queue_dialogue("It's beautiful.", "Elias")
+            self._queue_dialogue("Careful with that word.", "Mara")
+            self.first_impression = "beautiful"
+            self.game.flags['first_impression'] = 'beautiful'
+        elif choice == "It looks unusual.":
+            self._queue_dialogue("It looks unusual.", "Elias")
+            self._queue_dialogue("Give it time.", "Mara")
+            self.first_impression = "unusual"
+            self.game.flags['first_impression'] = 'unusual'
+        
+        self.show_observation_instruction = True
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
+        self._start_queued_dialogue()
 
     def _x17_after_water(self):
         """X-17 interaction after watering."""
@@ -700,6 +1085,8 @@ class Chapter2_Greenhouse:
         self.game.journal.add_objective('obj_wait',
                                          'Wait for reaction',
                                          'Observe X-17 for changes')
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
         self._start_queued_dialogue()
 
     def _water_x17_from_scene3(self):
@@ -720,7 +1107,7 @@ class Chapter2_Greenhouse:
 
     def _play_transition_dialogue(self):
         """Play radio call and Mara leaving dialogue, then transition to Scene 4."""
-        self.pending_transition = True
+        self._pending_chapter3 = True
         self.dialogue_queue = []
         self._queue_dialogue("Slowly.", "Mara")
         self._queue_dialogue("That's it?", "Elias")
@@ -754,6 +1141,9 @@ class Chapter2_Greenhouse:
         self.game.journal.add_objective('obj_horror',
                                          'Inspect X-17',
                                          'Observe X-17 for supernatural changes')
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
+        self._start_queued_dialogue()
         self._start_whisper()
         self._start_queued_dialogue()
 
@@ -766,82 +1156,118 @@ class Chapter2_Greenhouse:
     def _inspect_petals(self):
         """Inspect X-17 petals."""
         self.observed_petals = True
-        self.game.dialogue.show_dialogue("Closed petals.", "Elias", auto_advance=True)
-        self.game.dialogue.show_dialogue("Pale coloration.", "Elias", auto_advance=True)
-        self.game.dialogue.show_dialogue("No visible physical damage.", "Elias", auto_advance=True)
-        self.game.dialogue.show_dialogue("Good.", "Mara", auto_advance=True)
-        self.game.dialogue.show_dialogue("Next.", "Mara", auto_advance=True)
+        self.dialogue_queue = []
+        self._queue_dialogue("Closed petals.", "Elias")
+        self._queue_dialogue("Pale coloration.", "Elias")
+        self._queue_dialogue("No visible physical damage.", "Elias")
+        self._queue_dialogue("They were open three days ago.", "Mara")
+        self._queue_dialogue("They won't open again until you water it.", "Mara")
+        self._start_queued_dialogue()
+        self.show_inspection_options = True
 
     def _inspect_stem(self):
         """Inspect X-17 stem."""
         self.observed_stem = True
-        self.game.dialogue.show_dialogue("Stem is upright.", "Elias", auto_advance=True)
-        self.game.dialogue.show_dialogue("No visible lesions.", "Elias", auto_advance=True)
-        self.game.dialogue.show_dialogue("And?", "Mara", auto_advance=True)
-        self.game.dialogue.show_dialogue("Slight discoloration near the base.", "Elias", auto_advance=True)
-        self.game.dialogue.show_dialogue("Good.", "Mara", auto_advance=True)
-        self.game.dialogue.show_dialogue("Remember it.", "Mara", auto_advance=True)
+        self.dialogue_queue = []
+        self._queue_dialogue("Stem is upright.", "Elias")
+        self._queue_dialogue("No visible lesions.", "Elias")
+        self._queue_dialogue("And?", "Mara")
+        self._queue_dialogue("Slight discoloration near the base.", "Elias")
+        self._queue_dialogue("Purple.", "Mara")
+        self._queue_dialogue("That's the same shade as the soil.", "Mara")
+        self._queue_dialogue("It draws color from whatever touches it.", "Mara")
+        self._start_queued_dialogue()
+        self.show_inspection_options = True
 
     def _inspect_soil(self):
         """Inspect X-17 soil - triggers watering choice."""
         self.observed_soil = True
-        self.game.dialogue.show_dialogue("The soil is dry.", "Elias")
-        self.game.dialogue.show_dialogue(
-            "Which means?",
-            "Mara",
-            ["Water it.", "Change the soil.", "Move it into sunlight."],
-            lambda c: self._soil_choice(c))
+        self.dialogue_queue = []
+        self._queue_dialogue("The soil is dry.", "Elias")
+        self._queue_dialogue("Which means?", "Mara",
+                             ["Water it.", "Change the soil.", "Move it into sunlight."],
+                             lambda c: self._soil_choice(c))
+        self.dialogue_idx = 0
+        self.dialogue_playing = True
+        self._start_queued_dialogue()
+        self.just_started_dialogue = True
 
     def _soil_choice(self, choice: str):
         """Handle soil inspection choice."""
         if choice == "Water it.":
-            self.game.dialogue.show_dialogue("Water it.", "Elias", auto_advance=True)
-            self.game.dialogue.show_dialogue("Exactly.", "Mara", auto_advance=True)
+            self.dialogue_queue = []
+            self._queue_dialogue("Water it.", "Elias")
+            self._queue_dialogue("Exactly.", "Mara")
             self.game.journal.complete_objective('obj_inspect_x17')
-            # Close the observation overlay (it otherwise swallows every
-            # click permanently) and move into the watering phase so the
-            # player can actually fill the can and water X-17.
+            # Close the observation overlay and move into the watering phase
             self.observation_active = False
-            self.phase = 'watering'
-            self._start_watering()
+            self._pending_watering = True
+            self.dialogue_playing = True
+            self.dialogue_idx = 0
+            self._start_queued_dialogue()
         elif choice == "Change the soil.":
-            self.game.dialogue.show_dialogue("Change the soil?", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("No.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("Start with the obvious problem.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("The soil is dry.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue(
+            self.dialogue_queue = []
+            self._queue_dialogue("Change the soil?", "Elias")
+            self._queue_dialogue("No.", "Mara")
+            self._queue_dialogue("Start with the obvious problem.", "Mara")
+            self._queue_dialogue("The soil is dry.", "Mara")
+            self._queue_dialogue(
                 "Water it.",
                 "Mara",
                 ["Water it."],
                 lambda c: self._soil_choice("Water it."))
+            self.dialogue_playing = True
+            self.dialogue_idx = 0
+            self._start_queued_dialogue()
         else:
-            self.game.dialogue.show_dialogue("What was the rule outside?", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("Don't move the specimens.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("Good.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("So don't.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue(
+            self.dialogue_queue = []
+            self._queue_dialogue("What was the rule outside?", "Mara")
+            self._queue_dialogue("Don't move the specimens.", "Elias")
+            self._queue_dialogue("Good.", "Mara")
+            self._queue_dialogue("So don't.", "Mara")
+            self._queue_dialogue(
                 "Water it.",
                 "Mara",
                 ["Water it."],
                 lambda c: self._soil_choice("Water it."))
+            self.dialogue_playing = True
+            self.dialogue_idx = 0
+            self._start_queued_dialogue()
 
     def _start_watering(self):
         """Begin the watering puzzle."""
         self.game.journal.add_objective('obj_water_x17',
                                         'Prepare 500 ml Water',
                                         'Fill watering can at the sink')
-        self.game.dialogue.show_dialogue(
+        self.dialogue_queue = []
+        self._queue_dialogue(
             "You already found the watering can.\nWhere would you fill it?",
             "Mara")
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
+        self._start_queued_dialogue()
+
+    def _show_water_x17_prompt(self):
+        """Prompt player to water X-17 after selecting correct amount."""
+        self.dialogue_queue = []
+        self._queue_dialogue("Now go on.", "Mara")
+        self._queue_dialogue("Water the plant.", "Mara")
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
+        self._start_queued_dialogue()
 
     def _try_fill_water(self):
         """Attempt to fill the watering can."""
         if not self.clipboard_read:
-            self.game.dialogue.show_dialogue("How much water?", "Elias", auto_advance=True)
-            self.game.dialogue.show_dialogue("Check the care sheet.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("You could just tell me.", "Elias", auto_advance=True)
-            self.game.dialogue.show_dialogue("I could.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("Check the care sheet.", "Mara", auto_advance=True)
+            self.dialogue_queue = []
+            self._queue_dialogue("How much water?", "Elias")
+            self._queue_dialogue("Check the care sheet.", "Mara")
+            self._queue_dialogue("You could just tell me.", "Elias")
+            self._queue_dialogue("I could.", "Mara")
+            self._queue_dialogue("But you'll remember more if you look it up yourself.", "Mara")
+            self.dialogue_playing = True
+            self.dialogue_idx = 0
+            self._start_queued_dialogue()
             return
 
         self.game.dialogue.show_dialogue(
@@ -853,28 +1279,40 @@ class Chapter2_Greenhouse:
     def _water_quantity(self, quantity: str):
         """Handle water quantity selection."""
         if quantity == "250 ml":
-            self.game.dialogue.show_dialogue("Two hundred and fifty.", "Elias", auto_advance=True)
-            self.game.dialogue.show_dialogue("Read the care sheet again.", "Mara", auto_advance=True)
+            self.dialogue_queue = []
+            self._queue_dialogue("Two hundred and fifty.", "Elias")
+            self._queue_dialogue("Read the care sheet again.", "Mara")
             self.game.inventory.items['watering_can']['name'] = 'Empty Watering Can'
             self.watering_can_filled = False
+            self.dialogue_playing = True
+            self.dialogue_idx = 0
+            self._start_queued_dialogue()
         elif quantity == "500 ml":
             self.watering_can_filled = True
             self.game.inventory.items['watering_can']['name'] = 'Can (500 ml)'
-            self.game.dialogue.show_dialogue(
-                "Five hundred milliliters.", "Elias", auto_advance=True)
-            self.game.dialogue.show_dialogue("Good.", "Mara", auto_advance=True)
+            self._pending_water_x17 = True
+            self.dialogue_queue = []
+            self._queue_dialogue("Five hundred milliliters.", "Elias")
+            self._queue_dialogue("Good.", "Mara")
             self.game.journal.update_objective('obj_water_x17',
                                                'Water X-17 with 500 ml',
                                                'Use watering can on X-17')
             self.game.journal.add_objective('obj_water_x17_done',
-                                            'Water X-17',
-                                            'Apply 500 ml to the specimen')
+                                             'Water X-17',
+                                             'Apply 500 ml to the specimen')
+            self.dialogue_playing = True
+            self.dialogue_idx = 0
+            self._start_queued_dialogue()
         else:
-            self.game.dialogue.show_dialogue("Seven hundred and fifty.", "Elias", auto_advance=True)
-            self.game.dialogue.show_dialogue("You're caring for it, Elias.", "Mara", auto_advance=True)
-            self.game.dialogue.show_dialogue("Not drowning it.", "Mara", auto_advance=True)
+            self.dialogue_queue = []
+            self._queue_dialogue("Seven hundred and fifty.", "Elias")
+            self._queue_dialogue("You're caring for it, Elias.", "Mara")
+            self._queue_dialogue("Not drowning it.", "Mara")
             self.game.inventory.items['watering_can']['name'] = 'Empty Watering Can'
             self.watering_can_filled = False
+            self.dialogue_playing = True
+            self.dialogue_idx = 0
+            self._start_queued_dialogue()
 
     def _interact_journal(self):
         """Interact with the old research journal."""
@@ -892,4 +1330,6 @@ class Chapter2_Greenhouse:
         self.game.journal.update_objective('obj_inspect_x17',
                                            'Meet Mara at the specimen table',
                                            'Inspect X-17')
+        self.dialogue_playing = True
+        self.dialogue_idx = 0
         self._start_queued_dialogue()

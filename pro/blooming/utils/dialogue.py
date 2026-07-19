@@ -23,24 +23,63 @@ class DialogueSystem:
         self.typewriter_timer = 0
         self.typewriter_speed = 3
         self.typewriter_active = False
-        self.box_rect = pygame.Rect(50, 500, 1024 - 100, 200)
+        self.box_rect = pygame.Rect(50, 500, 1024 - 100, 240)
+        self._dialogue_queue = []
+        self._queue_index = 0
 
     def show_dialogue(self, text: str, speaker: str = "Elias",
                       choices=None, callback=None, auto_advance=False):
-        """Display a dialogue box with optional choices."""
-        self.current_dialogue = {
+        """Display a dialogue box with optional choices.
+        
+        Multiple calls chain together — first call displays, subsequent calls
+        queue and show when player advances via click.
+        """
+        # Reset queue if exhausted (player has seen everything)
+        if self._dialogue_queue and self._queue_index >= len(self._dialogue_queue):
+            self._dialogue_queue = []
+            self._queue_index = 0
+        # Add to queue
+        new_index = len(self._dialogue_queue)
+        self._dialogue_queue.append({
             'text': text,
             'speaker': speaker,
-            'lines': self._wrap_text(text, 550),
-        }
-        self.choices = choices or []
-        self.choice_callback = callback
-        self.typewriter_text = text
+            'choices': choices or [],
+            'callback': callback,
+            'auto_advance': auto_advance,
+        })
+        # Display at the new item's index (the one we just added)
+        if new_index < len(self._dialogue_queue):
+            self._queue_index = new_index
+            self._display_queued()
+
+    def _display_queued(self):
+        """Display the dialogue at _queue_index."""
+        if not self._dialogue_queue or self._queue_index >= len(self._dialogue_queue):
+            return
+        item = self._dialogue_queue[self._queue_index]
+        if isinstance(item, dict):
+            self.current_dialogue = {
+                'text': item['text'],
+                'speaker': item['speaker'],
+                'lines': self._wrap_text(item['text'], 550),
+            }
+            self.choices = item.get('choices', [])
+            self.choice_callback = item.get('callback')
+            self.typewriter_text = item['text']
+        else:
+            text, speaker = item
+            self.current_dialogue = {
+                'text': text,
+                'speaker': speaker,
+                'lines': self._wrap_text(text, 550),
+            }
+            self.choices = []
+            self.choice_callback = None
+            self.typewriter_text = text
         self.typewriter_index = 0
         self.typewriter_active = False
-        # Auto-advance after short delay for typewriter effect
-        self.typewriter_delay = len(text) * self.typewriter_speed
-        self.auto_advance = auto_advance
+        self.typewriter_delay = len(self.typewriter_text) * self.typewriter_speed
+        self.auto_advance = item['auto_advance']
         self.auto_advance_timer = 0.0
 
     def _wrap_text(self, text: str, max_width: int) -> list:
@@ -70,9 +109,13 @@ class DialogueSystem:
                 if self.current_dialogue and self.choice_callback and self.choices:
                     pos = pygame.mouse.get_pos()
                     for i, choice in enumerate(self.choices):
-                        y_pos = 620 + i * 40
+                        text_y = self.box_rect.y + 50
+                        for line in self._wrap_text(self.current_dialogue['text'], 550):
+                            text_y += 30
+                        choice_y = max(text_y + 10, self.box_rect.y + 110)
+                        y_pos = choice_y + i * 30
                         if (150 <= pos[0] <= 1024 - 150
-                                and y_pos <= pos[1] <= y_pos + 30):
+                                and y_pos <= pos[1] <= y_pos + 25):
                             self.choice_callback(choice)
                             self.current_dialogue = None
                             self.choices = []
@@ -90,6 +133,22 @@ class DialogueSystem:
                 self.typewriter_active = False
                 self.auto_advance = False
                 self.auto_advance_timer = 0.0
+
+    def player_clicked(self):
+        """Called when the player clicks during a non-queued dialogue.
+        
+        Advances to the next queued dialogue. Returns True if a new dialogue
+        was displayed.
+        """
+        self._queue_index += 1
+        if self._queue_index < len(self._dialogue_queue):
+            self._display_queued()
+            return True
+        else:
+            self.current_dialogue = None
+            self.choices = []
+            self.choice_callback = None
+            return False
 
     def draw(self):
         """Draw the dialogue box."""
@@ -122,9 +181,13 @@ class DialogueSystem:
 
         # Choices
         if self.choices and self.choice_callback:
-            y_off = 620
-            for choice in self.choices:
-                choice_rect = pygame.Rect(150, y_off, 1024 - 300, 30)
+            # Render choices inside the dialogue box, below text
+            text_y = self.box_rect.y + 50
+            for line in self._wrap_text(self.typewriter_text if self.typewriter_active else self.current_dialogue['text'], 550):
+                text_y += 30
+            choice_y = text_y + 5
+            for i, choice in enumerate(self.choices):
+                choice_rect = pygame.Rect(150, choice_y + i * 28, 1024 - 300, 22)
                 pygame.draw.rect(self.screen, COLORS['gray'], choice_rect)
                 pygame.draw.rect(self.screen, COLORS['white'], choice_rect, 1)
                 choice_surf = render_text(self.choice_font, '  ' + choice,
@@ -141,7 +204,11 @@ class DialogueSystem:
                              (self.box_rect.x + 10, self.box_rect.y + self.box_rect.height - 25))
 
     def clear(self):
-        """Clear current dialogue."""
+        """Clear current dialogue and reset queue."""
         self.current_dialogue = None
         self.choices = []
         self.choice_callback = None
+        self._dialogue_queue = []
+        self._queue_index = 0
+
+
