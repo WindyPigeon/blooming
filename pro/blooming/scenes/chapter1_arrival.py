@@ -13,6 +13,8 @@ Visual novel style:
 """
 
 import pygame
+import math
+import random
 from blooming.utils.utils import render_text, make_font, load_image, scale_image_keep_ratio
 from blooming.utils import COLORS
 
@@ -51,6 +53,49 @@ class Chapter1_Arrival:
         self.sign_img = load_image('props/facility-sign.png')
         self.intercom_img = load_image('props/intercom.png')
         self.access_card_img = load_image('props/access-card.png')
+
+        # Parallax fog layers
+        self.fog_layer_offset = 0
+        self.fog_layers = [
+            {'speed': 0.3, 'alpha': 40, 'scale': 1.0, 'color': (180, 190, 200)},
+            {'speed': 0.6, 'alpha': 60, 'scale': 0.8, 'color': (160, 175, 190)},
+            {'speed': 1.0, 'alpha': 80, 'scale': 0.5, 'color': (140, 160, 185)},
+        ]
+
+        # Card holographic shimmer
+        self.holo_hue = 0.0
+        self.holo_speed = 0.02
+
+        # Intercom static effect
+        self.intercom_static_timer = 0
+        self.intercom_static_active = False
+
+        # Door LED scan line
+        self.scan_line_y = 250
+        self.scan_line_speed = 2
+
+        # Mara breathing animation
+        self.breath_phase = 0.0
+        self.breath_speed = 0.03
+
+
+
+        # Rain particles (constant angle, varied speed/spacing)
+        self.raindrops = []
+        self.rain_angle = 20  # degrees (wind from left)
+        random.seed(42)
+        for i in range(200):
+            self.raindrops.append({
+                'x': random.random() * 1024,
+                'y': -50 - 200 * random.random(),
+                'speed': 2.0 + 3.0 * random.random(),
+                'length': 15 + 25 * random.random(),
+                'alpha': 180 + 75 * random.random(),
+                'hue': random.random(),
+            })
+
+        # Vignette parameters
+        self.vignette_strength = 0.6
 
         # Mara position
         self.mara_x = 350
@@ -146,6 +191,29 @@ class Chapter1_Arrival:
         self.rules_idx = 0
         self.rules_done = False
 
+    def _get_holo_color(self, hue):
+        """Generate holographic color from hue value."""
+        r = int(128 + 127 * (0.5 + 0.5 * (3.0 * hue)))
+        g = int(128 + 127 * (0.5 + 0.5 * (3.0 * hue + 1.0) % 3.0))
+        b = int(128 + 127 * (0.5 + 0.5 * (3.0 * hue + 2.0) % 3.0))
+        return (min(255, r), min(255, g), min(255, b))
+
+    def _render_glowing_text(self, font, text, color, glow_color=(255, 255, 200), glow_size=3):
+        """Render text with a glowing outline effect."""
+        # Create glow layers
+        glow_surf = pygame.Surface(font.size(text), pygame.SRCALPHA)
+        for offset_x in range(-glow_size, glow_size + 1):
+            for offset_y in range(-glow_size, glow_size + 1):
+                if offset_x == 0 and offset_y == 0:
+                    continue
+                glow_surf.blit(font.render(text, True, glow_color),
+                             (offset_x, offset_y))
+        
+        # Draw main text on top
+        text_surf = font.render(text, True, color)
+        glow_surf.blit(text_surf, (0, 0))
+        return glow_surf
+
     def draw(self, screen):
         """Draw the arrival scene with fade overlay."""
         if self.phase == 'done':
@@ -157,12 +225,42 @@ class Chapter1_Arrival:
             screen.blit(bg_scaled, (bx, by))
         else:
             screen.fill(COLORS['dark_fog'])
-            for i in range(0, 1024, 200):
-                alpha = pygame.time.get_ticks() % 30
-                fog_surf = pygame.Surface((200, 768), pygame.SRCALPHA)
-                fog_surf.fill((180, 190, 200, alpha))
-                screen.blit(fog_surf,
-                            (i - (pygame.time.get_ticks() % 200), 0))
+            # Parallax fog layers
+            for layer in self.fog_layers:
+                offset = pygame.time.get_ticks() * layer['speed'] / 100
+                for i in range(-1, 6):
+                    fog_surf = pygame.Surface((200, 768), pygame.SRCALPHA)
+                    fog_surf.fill((*layer['color'], layer['alpha']))
+                    screen.blit(fog_surf,
+                                (i * 200 - (offset % 200), 0))
+
+        # Draw rain particles (before vignette so not covered)
+        # Fixed trajectory: down + slight right
+        for rain in self.raindrops:
+            dx = math.sin(math.radians(self.rain_angle))
+            dy = math.cos(math.radians(self.rain_angle))
+            rain_surf = pygame.Surface((3, rain['length']), pygame.SRCALPHA)
+            grey = int(200 + 55 * rain['hue'])
+            rain_surf.fill((grey, grey, grey, int(rain['alpha'])))
+            # Rotate drop to align with movement direction
+            drop_angle = math.degrees(math.atan2(dx, dy))
+            rotated = pygame.transform.rotate(rain_surf, drop_angle)
+            screen.blit(rotated, (rain['x'], rain['y']))
+            rain['x'] += rain['speed'] * dx
+            rain['y'] += rain['speed'] * dy
+            if rain['y'] > 768:
+                rain['y'] = -rain['length']
+                rain['x'] = random.random() * 1024
+
+        # Draw vignette overlay
+        if not self.fade_active:
+            vignette = pygame.Surface((1024, 768), pygame.SRCALPHA)
+            for i in range(100):
+                alpha = int(self.vignette_strength * 255 * (1 - i / 100))
+                color = (0, 0, 0, alpha)
+                rect = pygame.Rect(i, i, 1024 - 2 * i, 768 - 2 * i)
+                pygame.draw.rect(vignette, color, rect, 1)
+            screen.blit(vignette, (0, 0))
 
         pygame.draw.rect(screen, COLORS['dark_gray'], (0, 550, 1024, 218))
 
@@ -179,12 +277,26 @@ class Chapter1_Arrival:
                              pygame.Rect(420, 270, 184, 278))
             pygame.draw.rect(screen, COLORS['gray'], self.door_rect, 3)
 
-        # Door indicator
+        # Door indicator with scan line
         ind_x, ind_y = 630, 300
         ind_color = (COLORS['red'] if self.door_locked
-                     else COLORS['green'])
+                      else COLORS['green'])
         pygame.draw.circle(screen, ind_color, (ind_x, ind_y), 15)
         pygame.draw.circle(screen, COLORS['white'], (ind_x, ind_y), 15, 2)
+        
+        # LED scan line on door
+        scan_x = self.door_rect.x + 20
+        scan_y = self.scan_line_y
+        if scan_y >= self.door_rect.top and scan_y <= self.door_rect.bottom:
+            scan_line = pygame.Surface((180, 3), pygame.SRCALPHA)
+            scan_line.fill((100, 200, 255, 150))
+            screen.blit(scan_line, (scan_x, scan_y))
+        
+        # Update scan line position
+        self.scan_line_y += self.scan_line_speed
+        if self.scan_line_y > self.door_rect.bottom:
+            self.scan_line_y = self.door_rect.top
+        
         ind_label = "LOCKED" if self.door_locked else "OPEN"
         ind_surf = render_text(make_font(12), ind_label, COLORS['white'])
         screen.blit(ind_surf, (ind_x - 25, ind_y + 20))
@@ -216,13 +328,24 @@ class Chapter1_Arrival:
             screen.blit(spk, (self.intercom_rect.x + 5,
                               self.intercom_rect.y + 40))
 
-        # Mara with fade alpha
+        # Mara with breathing animation and blink
         mx = int(self.mara_x)
+        breath_phase = (pygame.time.get_ticks() * 0.002) % (2 * math.pi)
+        breath_scale = 1.0 + 0.015 * math.sin(breath_phase)
+        
         if self.mara_img:
             mara_scaled, mfx, mfy = scale_image_keep_ratio(self.mara_img, 700, 700)
+            
+            # Apply breathing scale
+            if not self.mara_fade_active:
+                scaled_w = int(700 * breath_scale)
+                scaled_h = int(700 * breath_scale)
+                mara_scaled = pygame.transform.scale(self.mara_img, (scaled_w, scaled_h))
+            
             # Apply character fade
             if self.mara_alpha < 255:
                 mara_scaled.set_alpha(self.mara_alpha)
+            
             screen.blit(mara_scaled, (mx, mfy))
         else:
             mara_surf = pygame.Surface((100, 200), pygame.SRCALPHA)
@@ -231,6 +354,7 @@ class Chapter1_Arrival:
             if self.mara_alpha < 255:
                 mara_surf.set_alpha(self.mara_alpha)
             screen.blit(mara_surf, (mx, 300))
+        
         mara_lbl = render_text(make_font(14), "Mara", COLORS['white'])
         screen.blit(mara_lbl, (mx + 200, 600))
 
@@ -243,23 +367,24 @@ class Chapter1_Arrival:
             # Position card at center of screen
             card_scaled, cx, cy = scale_image_keep_ratio(self.access_card_img, 300, 190)
             card_scaled.set_alpha(self.card_overlay_alpha)
+            
+            # Holographic shimmer effect
+            holo_color = self._get_holo_color(self.holo_hue)
+            holo_surf = pygame.Surface((300, 190), pygame.SRCALPHA)
+            holo_surf.fill((*holo_color, int(80 + 40 * (pygame.time.get_ticks() % 100) / 100)))
+            card_scaled.blit(holo_surf, (0, 0), pygame.BLEND_RGBA_ADD)
+            
             screen.blit(card_scaled, (362 + cx, 289 + cy))
+            self.holo_hue = (self.holo_hue + self.holo_speed) % 1.0
 
             label = render_text(make_font(20), "ACCESS CARD (LEVEL 1)",
                                 COLORS['white'])
             screen.blit(label, (512 - 100, 230))
+        
+        # Update holographic hue even when card not showing
+        self.holo_hue = (self.holo_hue + self.holo_speed) % 1.0
 
 
-
-        # Hint (only after fade complete)
-        if not self.fade_active and not self.mara_fade_active:
-            hint1 = render_text(make_font(20), "Click hotspots to interact",
-                                COLORS['white'])
-            hint2 = render_text(make_font(20),
-                                "Get access card from Mara -> Use on panel -> Enter",
-                                COLORS['gray'])
-            screen.blit(hint1, (20, 720))
-            screen.blit(hint2, (20, 750))
 
         # Fade overlay
         if self.fade_alpha > 0:
@@ -333,6 +458,10 @@ class Chapter1_Arrival:
                     self.card_given_to_inventory = True
                     self.game.inventory.add_item('access_card', 'Access Card (Level 1)',
                                                  image_path='props/access-card.png')
+        
+        # Update intercom static timer
+        if self.intercom_static_active:
+            self.intercom_static_timer += 1
 
         # Process clicks
         for event in events:
@@ -418,8 +547,23 @@ class Chapter1_Arrival:
         # Intercom (optional)
         elif self.intercom_rect.collidepoint(pos) and not self.intercom_used:
             self.intercom_used = True
+            self.intercom_static_active = True
+            self.intercom_static_timer = 0
             self.game.dialogue.show_dialogue(
                 "Security intercom.", "Elias")
+        
+        # Intercom static effect
+        if self.intercom_static_active:
+            self.intercom_static_timer += 1
+            static_surf = pygame.Surface((100, 100), pygame.SRCALPHA)
+            for _ in range(50):
+                x = 50 * (hash(str(_ * 17)) % 100) // 100
+                y = 50 * (hash(str(_ * 13)) % 100) // 100
+                alpha = 100 + 100 * (hash(str(_ * 7)) % 55) // 55
+                static_surf.set_at((x, y), (255, 255, 255, alpha))
+            screen.blit(static_surf, (self.intercom_rect.x, self.intercom_rect.y))
+            if self.intercom_static_timer > 30:
+                self.intercom_static_active = False
 
         # Door
         elif self.door_rect.collidepoint(pos):
