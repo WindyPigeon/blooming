@@ -11,14 +11,14 @@ _DEJA_VU = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 
 def load_image(path: str):
-    """Load an image from the assets/images directory.
+    """Load an image from the data/images directory.
 
     Uses PIL to load the image as RGBA, then converts to pygame Surface
     via frombuffer. This avoids pygame.image.load() returning 24-bit
     surfaces that convert_alpha() fails on in pygame 2.6.1 + Python 3.14.
 
     Args:
-        path: Relative path within blooming/assets/images/
+        path: Relative path within blooming/data/images/
 
     Returns:
         pygame Surface or None if file not found

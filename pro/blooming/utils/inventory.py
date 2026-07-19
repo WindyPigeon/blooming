@@ -16,7 +16,7 @@ class Inventory:
         self._image_cache = {}
 
     def _get_image_path(self):
-        """Get assets/images directory path."""
+        """Get data/images directory path."""
         from blooming.utils import IMAGE_DIR
         return IMAGE_DIR
 

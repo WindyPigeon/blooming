@@ -10,11 +10,11 @@ import os
 
 # Set base paths before importing other modules
 _blooming_dir = os.path.dirname(__file__)
-_assets_dir = os.path.join(_blooming_dir, 'assets', 'images')
+_data_dir = os.path.join(_blooming_dir, 'data', 'images')
 
 from blooming.utils import set_base_dir, set_image_dir
 set_base_dir(_blooming_dir)
-set_image_dir(_assets_dir)
+set_image_dir(_data_dir)
 
 from blooming.utils.utils import render_text, make_font
 from blooming.utils import COLORS

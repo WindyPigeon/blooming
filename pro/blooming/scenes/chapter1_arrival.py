@@ -372,7 +372,8 @@ class Chapter1_Arrival:
             holo_color = self._get_holo_color(self.holo_hue)
             holo_surf = pygame.Surface((300, 190), pygame.SRCALPHA)
             holo_surf.fill((*holo_color, int(80 + 40 * (pygame.time.get_ticks() % 100) / 100)))
-            card_scaled.blit(holo_surf, (0, 0), pygame.BLEND_RGBA_ADD)
+            holo_surf.set_alpha(128)
+            card_scaled.blit(holo_surf, (0, 0))
             
             screen.blit(card_scaled, (362 + cx, 289 + cy))
             self.holo_hue = (self.holo_hue + self.holo_speed) % 1.0
