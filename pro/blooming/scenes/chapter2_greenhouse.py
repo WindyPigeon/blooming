@@ -534,7 +534,7 @@ class Chapter2_Greenhouse:
             self.game.dialogue.typewriter_delay = len(self.game.dialogue.typewriter_text) * self.game.dialogue.typewriter_speed
             self.dialogue_idx += 1
         else:
-            # Check state flags BEFORE clearing the queue/dialogue
+            # Queue exhausted - check state flags BEFORE clearing dialogue
             if self.pending_obs_instruction:
                 self.pending_obs_instruction = False
                 if not self.observation_instruction_shown:
@@ -552,7 +552,6 @@ class Chapter2_Greenhouse:
             if self.show_observation_instruction:
                 self.show_observation_instruction = False
                 self.pending_obs_instruction = True
-                self.game.dialogue.current_dialogue = None
                 return
             if self.show_first_impression_choice:
                 self.show_first_impression_choice = False
@@ -563,34 +562,21 @@ class Chapter2_Greenhouse:
                 return
             if self._pending_chapter3:
                 self._pending_chapter3 = False
-                self.game.dialogue.current_dialogue = None
-                self.game.dialogue.choices = []
-                self.game.dialogue.choice_callback = None
                 self._transition_to_scene4()
                 return
             if self._pending_watering:
                 self._pending_watering = False
                 self.phase = 'watering'
-                self.game.dialogue.current_dialogue = None
-                self.game.dialogue.choices = []
-                self.game.dialogue.choice_callback = None
                 self._start_watering()
                 return
             if self._pending_water_x17:
                 self._pending_water_x17 = False
-                self.game.dialogue.current_dialogue = None
-                self.game.dialogue.choices = []
-                self.game.dialogue.choice_callback = None
                 self._show_water_x17_prompt()
                 return
-            # Check state flags that should run AFTER queue exhaustion
             if self.show_first_impression_choice:
                 if self.first_impression is None:
-                    self.show_first_impression_choice = False
                     self._show_first_impression_choice()
-                    return
                 else:
-                    # Player already made choice - clear flag to prevent infinite loop
                     self.show_first_impression_choice = False
                     if not self.show_inspection_options:
                         self.show_inspection_options = True
@@ -599,8 +585,16 @@ class Chapter2_Greenhouse:
                 self.show_observation_instruction = False
                 self.pending_obs_instruction = True
                 return
-            # Now safe to clear
-
+            if self._pending_chapter3:
+                self._pending_chapter3 = False
+                self._transition_to_scene4()
+                return
+            if self._pending_watering:
+                self._pending_watering = False
+                self.phase = 'watering'
+                self._start_watering()
+                return
+            # No pending transitions - clear dialogue normally
             self.dialogue_playing = False
             self.game.dialogue.current_dialogue = None
             self.game.dialogue.clear()
@@ -872,13 +866,47 @@ class Chapter2_Greenhouse:
                     self.dialogue_idx += 1
                     # Check if queue is exhausted BEFORE displaying
                     if self.dialogue_idx >= len(self.dialogue_queue):
-                        # Queue exhausted - clear dialogue and run pending handlers
-                        self.dialogue_playing = False
-                        self.game.dialogue.current_dialogue = None
-                        self.game.dialogue.clear()
-                        self.dialogue_queue = []
-                        self.dialogue_idx = 0
-                        self.waiting_for_choice = False
+                        # Check pending handlers BEFORE clearing current_dialogue
+                        _pending_handled = False
+                        if self._pending_chapter3:
+                            self._pending_chapter3 = False
+                            self._transition_to_scene4()
+                            _pending_handled = True
+                        if self._pending_watering:
+                            self._pending_watering = False
+                            self.phase = 'watering'
+                            self._start_watering()
+                            _pending_handled = True
+                        if self._pending_water_x17:
+                            self._pending_water_x17 = False
+                            self._show_water_x17_prompt()
+                            _pending_handled = True
+                        if self.show_first_impression_choice:
+                            self.show_first_impression_choice = False
+                            if self.first_impression is None:
+                                self._show_first_impression_choice()
+                            else:
+                                if not self.show_inspection_options:
+                                    self.show_inspection_options = True
+                            _pending_handled = True
+                        if self.show_observation_instruction:
+                            self.show_observation_instruction = False
+                            self.pending_obs_instruction = True
+                            _pending_handled = True
+                        if self.pending_obs_instruction:
+                            self.pending_obs_instruction = False
+                            if not self.observation_instruction_shown:
+                                self._show_observation_instruction()
+                            _pending_handled = True
+                        if not _pending_handled:
+                            # Queue exhausted - clear dialogue and run pending handlers
+                            self.dialogue_playing = False
+                            self._inspection_options_shown = False
+                            self.observation_active = True
+                            self._observe_x17()
+                            _pending_handled = True
+                        # Don't fall through to hotspots when dialogue was active
+                        continue
                     else:
                         self._display_queued()
                         continue
@@ -889,25 +917,16 @@ class Chapter2_Greenhouse:
                 if not self.game.dialogue.current_dialogue:
                     if self._pending_chapter3:
                         self._pending_chapter3 = False
-                        self.game.dialogue.current_dialogue = None
-                        self.game.dialogue.choices = []
-                        self.game.dialogue.choice_callback = None
                         self._transition_to_scene4()
                         continue
                     if self._pending_watering:
                         print(f"[DEBUG TRANSITION] -> entering watering phase, show_inspection_options={self.show_inspection_options}")
                         self._pending_watering = False
-                        self.game.dialogue.current_dialogue = None
-                        self.game.dialogue.choices = []
-                        self.game.dialogue.choice_callback = None
                         self.phase = 'watering'
                         self._start_watering()
                         continue
                     if self._pending_water_x17:
                         self._pending_water_x17 = False
-                        self.game.dialogue.current_dialogue = None
-                        self.game.dialogue.choices = []
-                        self.game.dialogue.choice_callback = None
                         self._show_water_x17_prompt()
                         continue
                     # Defer observation pending handler: re-check if choice dialogue was created
@@ -950,6 +969,14 @@ class Chapter2_Greenhouse:
                     if self.observation_active and not self.x17_watered:
                         self.show_inspection_options = True
                         self._inspection_options_shown = False
+
+                # Show observation options before hotspot checks to prevent X-17 double-trigger
+                if self.show_inspection_options and not self._inspection_options_shown and not self.game.dialogue.current_dialogue:
+                    self.show_inspection_options = False
+                    self._inspection_options_shown = False
+                    self.observation_active = True
+                    self._observe_x17()
+                    continue
 
                 # Debug: track hotspot eligibility
                 _dp = not self.dialogue_playing
@@ -1064,12 +1091,6 @@ class Chapter2_Greenhouse:
                             self._observe_x17()
                         else:
                             self._x17_after_water()
-                    # Show observation options if not yet shown (triggered by show_inspection_options flag)
-                    if self.show_inspection_options and not self._inspection_options_shown:
-                        self.show_inspection_options = False
-                        self._inspection_options_shown = False
-                        self.observation_active = True
-                        self._observe_x17()
         # Reset just_started_dialogue after processing events so it only blocks one frame
         if self.just_started_dialogue:
             self.just_started_dialogue = False
@@ -1167,7 +1188,6 @@ class Chapter2_Greenhouse:
             self.game.dialogue.box_rect.y = 500  # Restore default position
         elif choice in ("Inspect petals", "Inspect stem", "Inspect soil"):
             self._pending_inspect_choice = choice
-            self.show_inspection_options = True
 
     def _show_first_impression_choice(self):
         """Show first impression dialogue choice (before player picks one)."""

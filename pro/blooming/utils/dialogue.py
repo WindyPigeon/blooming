@@ -154,7 +154,6 @@ class DialogueSystem:
             self._display_queued()
             return True
         else:
-            self.current_dialogue = None
             self.choices = []
             self.choice_callback = None
             return False
