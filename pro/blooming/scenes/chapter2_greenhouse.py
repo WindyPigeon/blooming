@@ -786,26 +786,39 @@ class Chapter2_Greenhouse:
                         continue
                     # Check dialogue choice clicks first
                     if has_choice_dialogue:
+                        print(f"[DEBUG CHOICE_OBS] pos={pos}, box_rect.y={self.game.dialogue.box_rect.y}, typewriter_active={self.game.dialogue.typewriter_active}, choices={self.game.dialogue.choices}, text=`{self.game.dialogue.current_dialogue['text'][:30]}`")
                         text_y = self.game.dialogue.box_rect.y + 50
-                        for line in self.game.dialogue._wrap_text(
+                        text_lines = list(self.game.dialogue._wrap_text(
                                 self.game.dialogue.typewriter_text if self.game.dialogue.typewriter_active
-                                else self.game.dialogue.current_dialogue['text'], 550):
+                                else self.game.dialogue.current_dialogue['text'], 550))
+                        print(f"[DEBUG CHOICE_OBS] text_lines={len(text_lines)}, text_y={text_y}")
+                        for line in text_lines:
                             text_y += 30
                         choice_y = text_y + 5
+                        print(f"[DEBUG CHOICE_OBS] choice_y={choice_y}")
                         for i, choice in enumerate(self.game.dialogue.choices):
                             y_pos = choice_y + i * 28
+                            print(f"[DEBUG CHOICE_OBS] choice[{i}]=`{choice}`, y_range=({y_pos}-{y_pos+22}), click_y={pos[1]}")
                             if (150 <= pos[0] <= 1024 - 150
                                     and y_pos <= pos[1] <= y_pos + 22):
+                                print(f"[DEBUG CHOICE_OBS] HIT choice[{i}]=`{choice}`")
                                 self.game.dialogue.choice_callback(choice)
                                 self.waiting_for_choice = False
                                 choice_clicked = True
+                        if not choice_clicked:
+                            print(f"[DEBUG CHOICE_OBS] MISSED - no button matched click_y={pos[1]}")
                     if choice_clicked:
                         continue
                     # Skip hotspot checks when a choice dialogue is active
                     if has_choice_dialogue:
+                        print(f"[DEBUG CHOICE_DIALOGUE] has_choice=True, waiting_for_choice={self.waiting_for_choice}, box_rect.y={self.game.dialogue.box_rect.y}, choices={len(self.game.dialogue.choices)}, typewriter_active={self.game.dialogue.typewriter_active}, typewriter_text={self.game.dialogue.typewriter_text[:50] if self.game.dialogue.typewriter_text else 'None'}")
                         continue
                     if self.show_inspection_options:
-                        self._pending_inspect_options = True
+                        self.show_inspection_options = False
+                        if not self._inspection_options_shown:
+                            self._inspection_options_shown = True
+                            self._observe_x17()
+                        continue
                     # Advance non-choice queued dialogues (e.g. soil chain)
                     if self.dialogue_playing and self.game.dialogue.current_dialogue:
                         # Peek ahead: skip advance if next item is a choice dialogue
@@ -821,22 +834,28 @@ class Chapter2_Greenhouse:
                             self._first_meet_x17()
                             continue
                 # Handle choice click for non-observation dialogues
-                if self.waiting_for_choice and self.game.dialogue.choices and self.game.dialogue.current_dialogue:
+                if self.waiting_for_choice and self.game.dialogue.choices and self.game.dialogue.current_dialogue and not self.just_started_dialogue:
                     if self.game.dialogue.choice_callback:
-                        pos = pygame.mouse.get_pos()
+                        print(f"[DEBUG CHOICE_NON_OBS] pos={pos}, box_rect.y={self.game.dialogue.box_rect.y}, choices={self.game.dialogue.choices}, text=`{self.game.dialogue.current_dialogue['text'][:30]}`")
                         text_y = self.game.dialogue.box_rect.y + 50
-                        for line in self.game.dialogue._wrap_text(
+                        text_lines = list(self.game.dialogue._wrap_text(
                                 self.game.dialogue.typewriter_text if self.game.dialogue.typewriter_active
-                                else self.game.dialogue.current_dialogue['text'], 550):
+                                else self.game.dialogue.current_dialogue['text'], 550))
+                        print(f"[DEBUG CHOICE_NON_OBS] text_lines={len(text_lines)}, text_y={text_y}")
+                        for line in text_lines:
                             text_y += 30
                         choice_y = text_y + 5
+                        print(f"[DEBUG CHOICE_NON_OBS] choice_y={choice_y}")
                         for i, choice in enumerate(self.game.dialogue.choices):
                             y_pos = choice_y + i * 28
+                            print(f"[DEBUG CHOICE_NON_OBS] choice[{i}]=`{choice}`, y_range=({y_pos}-{y_pos+22}), click_y={pos[1]}")
                             if (150 <= pos[0] <= 1024 - 150
                                     and y_pos <= pos[1] <= y_pos + 22):
+                                print(f"[DEBUG CHOICE_NON_OBS] HIT choice[{i}]=`{choice}`")
                                 self.game.dialogue.choice_callback(choice)
                                 self.waiting_for_choice = False
                                 continue
+                        print(f"[DEBUG CHOICE_NON_OBS] MISSED - no button matched click_y={pos[1]}")
                         # Click was in dialogue area but not on a choice — advance
                         self.waiting_for_choice = False
                         if self.game.dialogue.current_dialogue:
@@ -1051,6 +1070,9 @@ class Chapter2_Greenhouse:
                         self._inspection_options_shown = False
                         self.observation_active = True
                         self._observe_x17()
+        # Reset just_started_dialogue after processing events so it only blocks one frame
+        if self.just_started_dialogue:
+            self.just_started_dialogue = False
 
     def _pickup_watering_can(self):
         """Pick up the watering can with dialogue sequence."""
@@ -1405,6 +1427,7 @@ class Chapter2_Greenhouse:
 
     def _try_fill_water(self):
         """Attempt to fill the watering can."""
+        print(f"[DEBUG FILL] clipboard_read={self.clipboard_read}, watering_can_held={self.watering_can_held}, watering_can_filled={self.watering_can_filled}")
         if not self.clipboard_read:
             self.dialogue_queue = []
             self._queue_dialogue("How much water?", "Elias")
@@ -1417,6 +1440,8 @@ class Chapter2_Greenhouse:
             self._start_queued_dialogue()
             return
 
+        # Position dialogue box above the button range
+        self.game.dialogue.box_rect.y = 350
         self.game.dialogue.show_dialogue(
             "How much water?",
             "Elias",
@@ -1424,10 +1449,13 @@ class Chapter2_Greenhouse:
             lambda c: self._water_quantity(c))
         # Sync scene state so hotspots know a choice is active
         self.waiting_for_choice = True
-        self.just_started_dialogue = False
+        self.just_started_dialogue = True
 
     def _water_quantity(self, quantity: str):
         """Handle water quantity selection."""
+        import traceback
+        print(f"[DEBUG WATER_QTY] Selected: {quantity}, clipboard_read={self.clipboard_read}")
+        print(f"[DEBUG WATER_QTY] Stack:\n{''.join(traceback.format_stack())}")
         if quantity == "250 ml":
             self.dialogue_queue = []
             self._queue_dialogue("Two hundred and fifty.", "Elias")

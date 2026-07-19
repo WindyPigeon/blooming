@@ -38,6 +38,7 @@ class DialogueSystem:
         if self._dialogue_queue and self._queue_index >= len(self._dialogue_queue):
             self._dialogue_queue = []
             self._queue_index = 0
+        self._block_choice_clicks = False
         # Add to queue
         new_index = len(self._dialogue_queue)
         self._dialogue_queue.append({
@@ -81,6 +82,9 @@ class DialogueSystem:
         self.typewriter_delay = len(self.typewriter_text) * self.typewriter_speed
         self.auto_advance = item['auto_advance']
         self.auto_advance_timer = 0.0
+        # Track when a dialogue was created so we can skip choice clicks
+        # in the same frame to avoid processing events that created the dialogue
+        self._block_choice_clicks = True
 
     def _wrap_text(self, text: str, max_width: int) -> list:
         """Wrap text into lines that fit within max_width."""
@@ -107,7 +111,12 @@ class DialogueSystem:
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.current_dialogue and self.choice_callback and self.choices:
-                    pos = pygame.mouse.get_pos()
+                    # Skip choice clicks in the same frame the dialogue was created
+                    # to avoid processing events that triggered the dialogue creation
+                    if self._block_choice_clicks:
+                        self._block_choice_clicks = False
+                        continue
+                    pos = event.pos
                     for i, choice in enumerate(self.choices):
                         text_y = self.box_rect.y + 50
                         for line in self._wrap_text(self.current_dialogue['text'], 550):

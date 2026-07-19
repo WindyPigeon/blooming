@@ -27,6 +27,7 @@ class Chapter4_Horror:
         self.timer = 0
         self.whisper_counter = 0
         self.response_given = False
+        self.dialogue_playing = False
 
         # Images
         self.interior_img = load_image('backgrounds/greenhouse-horror.png')

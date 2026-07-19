@@ -34,6 +34,7 @@ class Chapter3_Care:
         self.mara_paged = False
         self.x17_glowing = False
         self.entered = False
+        self.dialogue_playing = False
 
         # Images
         self.interior_img = load_image('backgrounds/greenhouse-interior.png')
