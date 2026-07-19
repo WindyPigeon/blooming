@@ -797,11 +797,17 @@ class Chapter2_Greenhouse:
                         continue
                     if self._pending_watering:
                         self._pending_watering = False
+                        self.game.dialogue.current_dialogue = None
+                        self.game.dialogue.choices = []
+                        self.game.dialogue.choice_callback = None
                         self.phase = 'watering'
                         self._start_watering()
                         continue
                     if self._pending_water_x17:
                         self._pending_water_x17 = False
+                        self.game.dialogue.current_dialogue = None
+                        self.game.dialogue.choices = []
+                        self.game.dialogue.choice_callback = None
                         self._show_water_x17_prompt()
                         continue
                     if self.show_observation_instruction:
