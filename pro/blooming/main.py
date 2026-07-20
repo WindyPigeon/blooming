@@ -22,6 +22,7 @@ from blooming.utils.dialogue import DialogueSystem
 from blooming.utils.inventory import Inventory
 from blooming.utils.journal import Journal
 from blooming.utils.sanity import SanitySystem
+from blooming.utils.sfx import SFXManager
 from blooming.scenes import (
     Chapter1_Arrival,
     Chapter1_Orientation,
@@ -54,11 +55,22 @@ class Game:
         self.journal = Journal()
         self.sanity = SanitySystem()
 
+        # SFX
+        self.sfx = None
+        try:
+            import warnings
+            warnings.filterwarnings('ignore', 'use mixer')
+            pygame.mixer.init()
+            self.sfx = SFXManager(volume=0.7)
+            warnings.filterwarnings('default', 'use mixer')
+        except (pygame.error, NotImplementedError):
+            self.sfx = None
+
         # Game state
         self.flags = {}
-        self.chapter_select = ChapterSelect(self.screen)
-        self.pause_menu = PauseMenu(self.screen)
-        self.title_screen = TitleScreen(self.screen)
+        self.chapter_select = ChapterSelect(self.screen, self)
+        self.pause_menu = PauseMenu(self.screen, self)
+        self.title_screen = TitleScreen(self.screen, self)
         self.show_title = True
         self.show_chapter_select = False
         self.show_pause = False
@@ -96,6 +108,10 @@ class Game:
             self.scenes['horror'] = Chapter4_Horror(self)
         if self.scenes['ending'] is None:
             self.scenes['ending'] = Chapter4_Ending(self)
+
+    def play_sfx(self, name):
+        """Play a sound effect by filename stem."""
+        return self.sfx.play(name)
 
     def run(self):
         """Main game loop."""
@@ -184,6 +200,7 @@ class Game:
             # Sync pause volumes to game
             self.bgm_volume = self.pause_menu.bgm_volume
             self.sfx_volume = self.pause_menu.sfx_volume
+            self.sfx.set_volume(self.sfx_volume) if self.sfx else None
 
             # Update
             has_title = getattr(self.current_scene, 'title_active', False)

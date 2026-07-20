@@ -8,12 +8,14 @@ from blooming.utils import COLORS
 class ChapterSelect:
     """Menu to select which chapter to start."""
 
-    def __init__(self, screen):
+    def __init__(self, screen, game=None):
         self.screen = screen
+        self.game = game
         self.font = make_font(32)
         self.small_font = make_font(24)
         self.hovered = -1  # which chapter is hovered
         self.selected = 0  # which chapter to start
+        self._prev_hovered = -1
 
         # Chapter info: (title, description, start_scene_class)
         self.chapters = [
@@ -123,17 +125,25 @@ class ChapterSelect:
             if rect.collidepoint(pygame.mouse.get_pos()):
                 self.hovered = i
 
+        self._prev_hovered = self.hovered
+
+        sfx = self.game.sfx if self.game else None
+
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     pos = event.pos
                     # Back button
                     if self.back_rect.collidepoint(pos):
+                        if sfx:
+                            sfx.play('click_mouse')
                         return 'back'
                     # Chapter buttons
                     for i, rect in enumerate(self.button_rects):
                         if rect.collidepoint(pos):
                             self.selected = i
+                            if sfx:
+                                sfx.play('click_mouse')
                             return self.chapters[i]['key']
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:

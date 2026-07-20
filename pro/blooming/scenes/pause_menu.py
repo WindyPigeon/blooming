@@ -12,14 +12,16 @@ SETTINGS_FILE = os.path.join(os.path.dirname(__file__), '..', 'settings.json')
 class PauseMenu:
     """In-game pause overlay with volume controls and quit option."""
 
-    def __init__(self, screen):
+    def __init__(self, screen, game=None):
         self.screen = screen
+        self.game = game
         self.font = make_font(36)
         self.small_font = make_font(28)
         self.btn_font = make_font(24)
         self.hovered = -1  # which button is hovered
         self.dragging_slider = None  # which slider is being dragged
         self.mouse_pressed = False
+        self._prev_hovered = -1
 
         # Load or default settings
         self.bgm_volume = self._load_setting('bgm_volume', 0.7)
@@ -174,6 +176,9 @@ class PauseMenu:
 
     def update(self, events: list):
         """Handle pause menu events (mouse only)."""
+        sfx = self.game.sfx if self.game else None
+        self._prev_hovered = self.hovered
+
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
@@ -182,14 +187,22 @@ class PauseMenu:
                     if self.bgm_slider_rect.collidepoint(pos):
                         self.dragging_slider = 'bgm'
                         self._update_slider_value('bgm', pos)
+                        if sfx:
+                            sfx.play('click_mouse')
                     elif self.sfx_slider_rect.collidepoint(pos):
                         self.dragging_slider = 'sfx'
                         self._update_slider_value('sfx', pos)
+                        if sfx:
+                            sfx.play('click_mouse')
                     # Continue button
                     elif self.continue_rect.collidepoint(pos):
+                        if sfx:
+                            sfx.play('click_mouse')
                         return 'continue'
                     # Quit button
                     elif self.quit_rect.collidepoint(pos):
+                        if sfx:
+                            sfx.play('click_mouse')
                         return 'quit'
 
             elif event.type == pygame.MOUSEBUTTONUP:

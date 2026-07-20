@@ -8,8 +8,9 @@ from blooming.utils import COLORS
 class TitleScreen:
     """Main title screen with Start button."""
 
-    def __init__(self, screen):
+    def __init__(self, screen, game=None):
         self.screen = screen
+        self.game = game
         self.font = make_font(64)
         self.small_font = make_font(32)
         self.hovered = False
@@ -64,11 +65,14 @@ class TitleScreen:
 
     def update(self, events: list):
         """Handle mouse events. Returns 'start' if Start clicked."""
+        was_hovered = self.hovered
         self.hovered = self.start_rect.collidepoint(pygame.mouse.get_pos())
 
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and self.start_rect.collidepoint(event.pos):
+                    if self.game and self.game.sfx:
+                        self.game.sfx.play('click_mouse')
                     return 'start'
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:

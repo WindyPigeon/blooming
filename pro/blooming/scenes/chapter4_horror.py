@@ -231,6 +231,8 @@ class Chapter4_Horror:
             self.phase = 2
             self.game.sanity.decrease_sanity(10)
             self.shake.shake(5, 30)
+            if self.game.sfx:
+                self.game.sfx.play('hum')
 
         elif self.phase == 2:
             # Whispers
@@ -239,6 +241,10 @@ class Chapter4_Horror:
                 self.game.sanity.decrease_sanity(10)
                 self.shake.shake(10, 30)
                 self.particles.add_spore(510, 300, 10)
+                if self.game.sfx:
+                    self.game.sfx.play('whisper')
+                if self.game.sfx:
+                    self.game.sfx.play('heartbeat')
                 if self.whisper_counter == 1:
                     self.game.dialogue.show_dialogue(
                         "Elias.",
@@ -261,6 +267,10 @@ class Chapter4_Horror:
             self.game.journal.add_objective('ending',
                                             'End of Day 1',
                                             'The greenhouse door closes behind you')
+            if self.game.sfx:
+                self.game.sfx.play('music_sting')
+            if self.game.sfx:
+                self.game.sfx.play('glitch')
             if not hasattr(self, '_ending_timer'):
                 self._ending_timer = 0
             self._ending_timer = 300  # 5 seconds before ending
@@ -300,6 +310,8 @@ class Chapter4_Horror:
                     x17_rect = pygame.Rect(450, 250, 120, 120)
                     if x17_rect.collidepoint(pos):
                         self.response_given = True
+                        if self.game.sfx:
+                            self.game.sfx.play('ouch')
                         self._give_horror_response()
 
                 # Intercom option
@@ -319,6 +331,8 @@ class Chapter4_Horror:
                     exit_rect = pygame.Rect(100, 500, 150, 60)
                     if exit_rect.collidepoint(pos):
                         self.response_given = True
+                        if self.game.sfx:
+                            self.game.sfx.play('buzz')
                         self.game.dialogue.show_dialogue(
                             "Elias walks toward the door.\nDon't go.\nSFX: "
                             "Electrical buzz.\nWho's there?",

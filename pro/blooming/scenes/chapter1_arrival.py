@@ -94,6 +94,9 @@ class Chapter1_Arrival:
                 'hue': random.random(),
             })
 
+        # Rain ambience
+        self.rain_played = False
+
         # Vignette parameters
         self.vignette_strength = 0.6
 
@@ -243,6 +246,12 @@ class Chapter1_Arrival:
                     fog_surf.fill((*layer['color'], layer['alpha']))
                     screen.blit(fog_surf,
                                 (i * 200 - (offset % 200), 0))
+
+        # Rain ambience (looped once on first draw)
+        if self.game and self.game.sfx and not self.rain_played:
+            if self.game.sfx.sounds.get('rain'):
+                self.game.sfx.sounds['rain'].play(-1)
+                self.rain_played = True
 
         # Draw rain particles (before vignette so not covered)
         # Fixed trajectory: down + slight right
@@ -593,6 +602,8 @@ class Chapter1_Arrival:
         # Sign (optional)
         if self.sign_rect.collidepoint(pos) and not self.sign_read and not self.dialogue_playing:
             self.sign_read = True
+            if self.game.sfx:
+                self.game.sfx.play('widget_selection')
             self.game.dialogue.show_dialogue(
                 "Blackwood Research Facility.", "Elias")
 
@@ -601,6 +612,8 @@ class Chapter1_Arrival:
             self.intercom_used = True
             self.intercom_static_active = True
             self.intercom_static_timer = 0
+            if self.game.sfx:
+                self.game.sfx.play('spark')
             self.game.dialogue.show_dialogue(
                 "Security intercom.", "Elias")
         
@@ -620,17 +633,23 @@ class Chapter1_Arrival:
         # Door
         elif self.door_rect.collidepoint(pos) and not self.dialogue_playing:
                     if self.phase == 'door_unlocked':
+                        if self.game.sfx:
+                            self.game.sfx.play('door_open')
                         self._enter_facility()
                     elif self.card_done:
                         # Card received, check if player has it
                         if self.game.inventory.has_item('access_card'):
                             self.door_unlocked()
                         else:
+                            if self.game.sfx:
+                                self.game.sfx.play('key_add')
                             self.game.dialogue.show_dialogue(
                                 "Select the card from your equipment.\n"
                                 "Then use it on the security panel.", "Mara")
                     else:
                         self.door_clicked_before_card = True
+                        if self.game.sfx:
+                            self.game.sfx.play('key_add')
                         self.game.dialogue.show_dialogue(
                             "Locked.", "Elias")
 
@@ -650,6 +669,8 @@ class Chapter1_Arrival:
             "You'll use equipment the same way.\n"
             "Choose what you need...\n"
             "then use it where it belongs.", "Mara")
+        if self.game.sfx:
+            self.game.sfx.play('scan')
         # Animate Mara walking toward door
         self.mara_animating = True
         self.mara_x = 500

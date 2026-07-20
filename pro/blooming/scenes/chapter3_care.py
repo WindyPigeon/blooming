@@ -241,6 +241,8 @@ class Chapter3_Care:
                 "Elias carefully waters the plant.\nSlowly.\nThe watering "
                 "finishes.",
                 "Elias")
+            if self.game.sfx:
+                self.game.sfx.play('splash')
             self.game.journal.complete_objective('obj_water_x17_done')
             self.game.journal.add_objective('obj_wait',
                                             'Wait for reaction',
@@ -261,6 +263,8 @@ class Chapter3_Care:
         self.game.dialogue.show_dialogue(
             "SFX: Radio static crackles through the greenhouse.",
             "System")
+        if self.game.sfx:
+            self.game.sfx.play('static')
 
         self.game.dialogue.show_dialogue(
             "Dr. Vale.\nReport to Lab Two immediately.\nI'm coming.",
@@ -281,6 +285,10 @@ class Chapter3_Care:
             "SFX: Greenhouse door closes.\nSFX: Electronic lock engages.\nThe "
             "greenhouse ambience becomes quieter.",
             "System")
+        if self.game.sfx:
+            self.game.sfx.play('door_close')
+        if self.game.sfx:
+            self.game.sfx.play('lock')
 
         self.game.journal.update_objective('obj_wait',
                                            'Complete observation',
@@ -340,10 +348,14 @@ class Chapter3_Care:
 
     def _use_intercom(self):
         """Use the intercom after Mara leaves."""
+        if self.game.sfx:
+            self.game.sfx.play('intercom')
         self.game.dialogue.show_dialogue(
             "Dr. Vale?\nMara, are you there?\nStatic... then: "
             "I'm here.\nThe intercom shuts down.",
             "Elias")
+        if self.game.sfx:
+            self.game.sfx.play('spark')
         self.game.sanity.decrease_sanity(10)
         self.game.flags['first_horror_response'] = 'intercom'
 

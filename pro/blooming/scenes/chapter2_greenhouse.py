@@ -138,13 +138,18 @@ class Chapter2_Greenhouse:
         self._init_whisper_sound()
 
     def _init_whisper_sound(self):
-        """Procedurally generate a soft, breathy whisper loop.
+        """Load the whisper.ogg SFX file for the ambient greenhouse whisper.
 
-        The project ships no audio assets, so the whisper is synthesised
-        from filtered noise rather than loaded from a file. Any failure
-        (no audio device, no numpy, mixer unavailable) is swallowed so the
-        scene works identically with sound disabled.
+        If loading fails (no mixer, no file), falls back to procedural
+        synthesis via numpy. Any failure is swallowed so the scene works
+        identically with sound disabled.
         """
+        if self.game and self.game.sfx:
+            ws = self.game.sfx.sounds.get('whisper')
+            if ws is not None:
+                self.whisper_sound = ws
+                return
+
         if np is None:
             return
         try:
@@ -155,10 +160,8 @@ class Chapter2_Greenhouse:
             t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
             rng = np.random.default_rng(17)
             noise = rng.normal(0, 1, t.shape[0])
-            # Crude low-pass (moving average) so it reads as "breath" not hiss
             kernel = np.ones(48) / 48.0
             filtered = np.convolve(noise, kernel, mode='same')
-            # Slow breathing-rhythm amplitude envelope
             envelope = 0.4 + 0.6 * (0.5 + 0.5 * np.sin(2 * math.pi * 0.25 * t))
             waveform = filtered * envelope
             peak = np.max(np.abs(waveform))
@@ -1070,10 +1073,14 @@ class Chapter2_Greenhouse:
                     if not self.clipboard_read:
                         self.showing_care_sheet = True
                         self.clipboard_read = True
+                        if self.game.sfx:
+                            self.game.sfx.play('page')
                         self.game.journal.add_objective('obj_read_care',
-                                                        'Read Care Instructions',
-                                                        'Find X-17 care sheet')
+                                                         'Read Care Instructions',
+                                                         'Find X-17 care sheet')
                     else:
+                        if self.game.sfx:
+                            self.game.sfx.play('page')
                         self.game.dialogue.show_dialogue(
                             "Daily care: 23-25°C, inspect for abnormalities, "
                             "500 ml filtered water, record reactions, "
@@ -1127,6 +1134,8 @@ class Chapter2_Greenhouse:
         """Pick up the watering can with dialogue sequence."""
         self.watering_can_held = True
         self.game.inventory.add_item('watering_can', 'Empty Watering Can', image_path='props/watering-can.png')
+        if self.game.sfx:
+            self.game.sfx.play('pickup')
         self.dialogue_queue = []
         self._queue_dialogue("Standard watering can.", "Elias")
         self._queue_dialogue("Take it.", "Mara")
@@ -1351,6 +1360,8 @@ class Chapter2_Greenhouse:
         self._queue_dialogue(
             "SFX: Greenhouse door closes.\nSFX: Electronic lock engages.\nThe "
             "greenhouse ambience becomes quieter.", "System")
+        if self.game.sfx:
+            self.game.sfx.play('door_close')
         self.game.sanity.decrease_sanity(5)
         self.game.journal.update_objective('obj_wait',
                                              'Complete observation',
